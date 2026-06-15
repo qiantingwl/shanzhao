@@ -1,0 +1,38 @@
+# Dependencies
+admin/
+backend/
+shan/
+docker/Dockerfile
+docker/container-init.sql
+docker/entrypoint.sh
+**/node_modules/
+**/.pnpm-store/
+
+# Build output
+**/dist/
+**/build/
+!admin/build/
+!admin/build/**
+**/unpackage/
+
+# Runtime data
+**/uploads/
+**/runtime/
+**/mysql-data/
+**/backups/
+**/.local-*/
+
+# Environment files
+**/.env
+!admin/.env.prod
+!admin/.env.test
+!backend/.env.example
+
+# Logs and temp files
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Deployment archives
+deploy.zip
