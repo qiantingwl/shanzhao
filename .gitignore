@@ -5,6 +5,7 @@ shan/
 docker/Dockerfile
 docker/container-init.sql
 docker/entrypoint.sh
+.dockerignore
 **/node_modules/
 **/.pnpm-store/
 
