@@ -1,13 +1,7 @@
 # Dependencies
-admin/
-backend/
-shan/
-docker/Dockerfile
-docker/container-init.sql
-docker/entrypoint.sh
-.dockerignore
 **/node_modules/
 **/.pnpm-store/
+**/.git
 
 # Build output
 **/dist/
@@ -16,7 +10,7 @@ docker/entrypoint.sh
 !admin/build/**
 **/unpackage/
 
-# Runtime data
+# Runtime data and local state
 **/uploads/
 **/runtime/
 **/mysql-data/

@@ -1,0 +1,101 @@
+{
+	"pages": [
+		{
+			"path": "pages/create/create",
+			"style": {
+				"navigationBarTitleText": "创建页",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/records/records",
+			"style": {
+				"navigationBarTitleText": "发布记录",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/profile/profile",
+			"style": {
+				"navigationBarTitleText": "我的",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/record-detail/record-detail",
+			"style": {
+				"navigationBarTitleText": "查看记录",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/rules/rules",
+			"style": {
+				"navigationBarTitleText": "使用说明",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/help/help",
+			"style": {
+				"navigationBarTitleText": "常见问题",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/blacklist/blacklist",
+			"style": {
+				"navigationBarTitleText": "小小黑屋",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/follow/follow",
+			"style": {
+				"navigationBarTitleText": "关注我们",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/about/about",
+			"style": {
+				"navigationBarTitleText": "关于我们",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/share-moments/share-moments",
+			"style": {
+				"navigationBarTitleText": "发朋友圈",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/viewer/viewer",
+			"style": {
+				"navigationBarTitleText": "查看闪照",
+				"navigationStyle": "custom",
+				"disableScroll": true
+			}
+		},
+		{
+			"path": "pages/agreement/agreement",
+			"style": {
+				"navigationBarTitleText": "用户协议",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/privacy/privacy",
+			"style": {
+				"navigationBarTitleText": "隐私政策",
+				"navigationStyle": "custom"
+			}
+		}
+	],
+	"globalStyle": {
+		"navigationBarTextStyle": "black",
+		"navigationBarBackgroundColor": "#f5f6f8",
+		"backgroundColor": "#f5f6f8"
+	}
+}

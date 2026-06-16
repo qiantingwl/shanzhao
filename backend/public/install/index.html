@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>闪照管理系统安装向导</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: linear-gradient(135deg, #111827, #1e293b 45%, #0f172a); color: #e5e7eb; }
+    .page { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 32px 16px; }
+    .card { width: 100%; max-width: 860px; border: 1px solid rgba(255,255,255,.12); border-radius: 24px; background: rgba(15,23,42,.9); box-shadow: 0 24px 80px rgba(0,0,0,.35); overflow: hidden; }
+    .header { padding: 34px 38px; background: radial-gradient(circle at top left, rgba(59,130,246,.35), transparent 34%), rgba(255,255,255,.04); border-bottom: 1px solid rgba(255,255,255,.1); }
+    .header h1 { margin: 0 0 10px; font-size: 30px; }
+    .header p { margin: 0; color: #94a3b8; line-height: 1.7; }
+    form { padding: 34px 38px 38px; }
+    .section { margin-bottom: 28px; }
+    .section h2 { margin: 0 0 16px; font-size: 18px; color: #f8fafc; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    label { display: block; font-size: 13px; color: #cbd5e1; margin-bottom: 8px; }
+    input { width: 100%; height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid rgba(148,163,184,.28); background: rgba(15,23,42,.72); color: #f8fafc; outline: none; }
+    input:focus { border-color: #60a5fa; box-shadow: 0 0 0 3px rgba(96,165,250,.14); }
+    .full { grid-column: 1 / -1; }
+    .tip { margin-top: 8px; color: #94a3b8; font-size: 12px; line-height: 1.6; }
+    .hidden { display: none; }
+    .actions { display: flex; gap: 12px; align-items: center; justify-content: flex-end; padding-top: 6px; }
+    button { height: 46px; padding: 0 24px; border: 0; border-radius: 14px; background: linear-gradient(135deg, #3b82f6, #06b6d4); color: white; font-weight: 700; cursor: pointer; }
+    button.secondary { border: 1px solid rgba(148,163,184,.32); background: rgba(15,23,42,.72); color: #dbeafe; }
+    button:disabled { opacity: .65; cursor: not-allowed; }
+    .status { margin-right: auto; color: #93c5fd; font-size: 14px; }
+    .message { display: none; margin: 0 38px 30px; padding: 14px 16px; border-radius: 14px; line-height: 1.6; }
+    .message.ok { display: block; background: rgba(22,163,74,.14); border: 1px solid rgba(34,197,94,.28); color: #bbf7d0; }
+    .message.err { display: block; background: rgba(220,38,38,.14); border: 1px solid rgba(248,113,113,.28); color: #fecaca; }
+    @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } .header, form { padding-left: 22px; padding-right: 22px; } .message { margin-left: 22px; margin-right: 22px; } }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="card">
+      <div class="header">
+        <h1>闪照管理系统安装向导</h1>
+        <p>首次部署只需要填写数据库、小程序和后台管理员信息。后台页面、API 和上传服务都由当前后端统一提供。</p>
+      </div>
+      <form id="installForm">
+        <div class="section">
+          <h2>数据库配置</h2>
+          <div class="grid">
+            <div><label>数据库地址</label><input name="dbHost" value="127.0.0.1" required /></div>
+            <div><label>数据库端口</label><input name="dbPort" type="number" value="3306" required /></div>
+            <div><label>数据库名</label><input name="dbName" value="shan" required /></div>
+            <div><label>数据库账号</label><input name="dbUser" required /></div>
+            <div class="full"><label>数据库密码</label><input name="dbPassword" type="password" /></div>
+          </div>
+        </div>
+        <div class="section">
+          <h2>小程序配置</h2>
+          <div class="grid">
+            <div><label>小程序 AppID</label><input name="wxAppId" placeholder="wx..." required /></div>
+            <div><label>小程序 AppSecret</label><input name="wxSecret" type="password" required /></div>
+          </div>
+          <div class="tip">AppID 和 AppSecret 必须来自同一个微信小程序。</div>
+        </div>
+        <div class="section">
+          <h2>后台管理员</h2>
+          <div class="grid">
+            <div><label>管理员账号</label><input name="adminUsername" value="admin" required /></div>
+            <div><label>管理员密码</label><input name="adminPassword" type="password" required minlength="6" /></div>
+          </div>
+        </div>
+        <div class="section hidden">
+          <h2>服务配置</h2>
+          <div class="grid">
+            <div><label>服务端口</label><input name="port" type="number" value="3001" required /></div>
+            <div><label>JWT 密钥</label><input name="jwtSecret" placeholder="留空自动生成" /></div>
+            <div class="full"><label>后台 JWT 密钥</label><input name="adminJwtSecret" placeholder="留空自动生成" /></div>
+          </div>
+        </div>
+        <div class="actions">
+          <span class="status" id="status"></span>
+          <button class="secondary" id="testDbBtn" type="button">测试数据库连接</button>
+          <button id="submitBtn" type="submit">一键安装</button>
+        </div>
+      </form>
+      <div id="message" class="message"></div>
+    </div>
+  </div>
+  <script>
+    const form = document.getElementById('installForm');
+    const btn = document.getElementById('submitBtn');
+    const testDbBtn = document.getElementById('testDbBtn');
+    const statusEl = document.getElementById('status');
+    const message = document.getElementById('message');
+
+    function show(type, text) {
+      message.className = 'message ' + type;
+      message.textContent = text;
+    }
+
+    async function checkInstalled() {
+      try {
+        const res = await fetch('/api/install/status');
+        const json = await res.json();
+        if (json.data && json.data.installed) {
+          statusEl.textContent = '系统已安装，可直接进入后台';
+          btn.textContent = '进入后台';
+          btn.type = 'button';
+          btn.onclick = () => { location.href = '/'; };
+        }
+      } catch (e) {}
+    }
+
+    function formData() {
+      const data = Object.fromEntries(new FormData(form).entries());
+      data.dbPort = Number(data.dbPort || 3306);
+      data.port = Number(data.port || 3001);
+      return data;
+    }
+
+    testDbBtn.addEventListener('click', async () => {
+      testDbBtn.disabled = true;
+      statusEl.textContent = '正在测试数据库连接...';
+      message.className = 'message';
+      const data = formData();
+      try {
+        const res = await fetch('/api/install/test-db', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            dbHost: data.dbHost,
+            dbPort: data.dbPort,
+            dbName: data.dbName,
+            dbUser: data.dbUser,
+            dbPassword: data.dbPassword
+          })
+        });
+        const json = await res.json();
+        if (!res.ok || json.code !== '0000') throw new Error(json.msg || '数据库连接失败');
+        show('ok', json.data.message || '数据库连接成功，可以继续安装。');
+        statusEl.textContent = '连接通过';
+      } catch (err) {
+        show('err', err.message || '数据库连接失败');
+        statusEl.textContent = '';
+      } finally {
+        testDbBtn.disabled = false;
+      }
+    });
+
+    async function waitForRestart() {
+      show('ok', '安装成功！服务正在重启，请稍候，完成后将自动跳转后台...');
+      statusEl.textContent = '正在等待服务重启...';
+      const start = Date.now();
+      while (Date.now() - start < 60000) {
+        await new Promise(r => setTimeout(r, 2000));
+        try {
+          const res = await fetch('/api/install/status');
+          const json = await res.json();
+          if (json.data && json.data.installed) {
+            statusEl.textContent = '重启完成，正在跳转...';
+            show('ok', '安装成功！即将跳转后台...');
+            await new Promise(r => setTimeout(r, 1000));
+            location.href = '/';
+            return;
+          }
+        } catch (e) {}
+      }
+      statusEl.textContent = '';
+      show('ok', '安装成功！请手动重启服务后访问当前域名进入后台。');
+    }
+
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      btn.disabled = true;
+      testDbBtn.disabled = true;
+      statusEl.textContent = '正在安装，请稍候...';
+      message.className = 'message';
+      const data = formData();
+      try {
+        const res = await fetch('/api/install/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        const json = await res.json();
+        if (!res.ok || json.code !== '0000') throw new Error(json.msg || '安装失败');
+        await waitForRestart();
+      } catch (err) {
+        show('err', err.message || '安装失败');
+        statusEl.textContent = '';
+        btn.disabled = false;
+        testDbBtn.disabled = false;
+      }
+    });
+
+    checkInstalled();
+  </script>
+</body>
+</html>
