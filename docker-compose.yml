@@ -1,0 +1,9 @@
+services:
+  shanzhao:
+    image: ghcr.io/qiantingwl/shanzhao:latest
+    container_name: shanzhao
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - /opt/shanzhao:/app/data
