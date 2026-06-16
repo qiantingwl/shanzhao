@@ -11,7 +11,7 @@ import {
   Request,
 } from '@nestjs/common';
 import { IsNumber, IsOptional, IsString } from 'class-validator';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../common/guards/auth.guard';
 import { FlashService } from './flash.service';
 
 interface ReqUser {

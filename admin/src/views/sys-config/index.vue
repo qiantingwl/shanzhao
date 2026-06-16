@@ -48,6 +48,18 @@ const AUDIT_DRIVER_OPTIONS = [
 
 const SECTIONS: Section[] = [
   {
+    title: '微信小程序',
+    items: [
+      { key: 'wx_appid', label: '小程序 AppID', remark: '微信公众平台获取，留空则使用环境变量 WX_APPID' },
+      {
+        key: 'wx_secret',
+        label: '小程序 AppSecret',
+        remark: '微信公众平台获取，留空则使用环境变量 WX_SECRET',
+        type: 'password'
+      }
+    ]
+  },
+  {
     title: '基础设置',
     items: [
       { key: 'default_max_num', label: '默认最大查看次数', remark: '用户创建闪照时的默认次数上限' },

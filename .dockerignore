@@ -11,5 +11,5 @@
 **/uploads
 **/runtime
 **/mysql-data
-**/backups
-deploy.zip
+*.log
+*.tmp

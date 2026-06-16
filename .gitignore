@@ -1,7 +1,6 @@
 # Dependencies
 **/node_modules/
 **/.pnpm-store/
-**/.git
 
 # Build output
 **/dist/
@@ -10,24 +9,22 @@
 !admin/build/**
 **/unpackage/
 
-# Runtime data and local state
+# Runtime data
 **/uploads/
 **/runtime/
 **/mysql-data/
-**/backups/
-**/.local-*/
 
 # Environment files
 **/.env
 !admin/.env.prod
 !admin/.env.test
-!backend/.env.example
 
-# Logs and temp files
+# Logs and temp
 *.log
 *.tmp
 .DS_Store
 Thumbs.db
 
-# Deployment archives
-deploy.zip
+# Release repo and archives (should not be committed)
+.release-repo/
+*.zip

@@ -41,7 +41,10 @@ CREATE TABLE IF NOT EXISTS `flash` (
   `delFlag` varchar(1) NOT NULL DEFAULT '0',
   `createdAt` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   `updatedAt` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `IDX_flash_authorId` (`authorId`),
+  KEY `IDX_flash_status` (`status`),
+  KEY `IDX_flash_delFlag` (`delFlag`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `flash_records` (
@@ -52,7 +55,10 @@ CREATE TABLE IF NOT EXISTS `flash_records` (
   `viewSec` int DEFAULT NULL,
   `screenFlag` varchar(1) NOT NULL DEFAULT '0',
   `createdAt` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `IDX_flash_records_flashId` (`flashId`),
+  KEY `IDX_flash_records_userId` (`userId`),
+  KEY `IDX_flash_records_recordMode` (`recordMode`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `sys_config` (
@@ -73,7 +79,9 @@ CREATE TABLE IF NOT EXISTS `help` (
   `delFlag` varchar(1) NOT NULL DEFAULT '0',
   `createdAt` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   `updatedAt` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `IDX_help_sort` (`sort`),
+  KEY `IDX_help_delFlag` (`delFlag`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `user_bans` (
@@ -87,5 +95,7 @@ CREATE TABLE IF NOT EXISTS `user_bans` (
   `delFlag` varchar(1) NOT NULL DEFAULT '0',
   `createdAt` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   `updatedAt` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `IDX_user_bans_userId` (`userId`),
+  KEY `IDX_user_bans_delFlag` (`delFlag`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -1,181 +1,103 @@
 # 闪照小程序
 
-闪照小程序是一套微信小程序闪照/阅后即焚图片系统，包含小程序前端、后台管理端、后端 API、图片上传、内容审核、存储配置、用户管理、闪照记录管理和数据清理能力。
+微信小程序闪照/阅后即焚图片系统。Docker 一键部署，内置后端、管理后台和数据库。
 
-## 功能
+## 上线只需 4 步
+
+### 1. 拉取镜像并启动
+
+```bash
+docker run -d --name shanzhao --restart always \
+  -p 3000:3000 -v /opt/shanzhao:/app/data \
+  ghcr.io/qiantingwl/shanzhao:latest
+```
+
+启动后访问 `http://服务器IP:3000/`，默认账号 `admin` / `admin123`，首次登录请改密码。数据库、管理后台、上传服务全部内置，无需额外配置。
+
+### 2. 反向代理 HTTPS 域名
+
+微信小程序要求 HTTPS，需用 Nginx（或宝塔）把域名反代到后端。关键：上传图片最大 9MB，必须把 `client_max_body_size` 调大，否则大图上传会 413 失败。
+
+```nginx
+server {
+  listen 443 ssl;
+  server_name your-domain.com;
+
+  # ssl_certificate / ssl_certificate_key 由证书工具或宝塔自动填写
+
+  client_max_body_size 12m;
+
+  location / {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+}
+```
+
+后台、API、上传文件都走同一个域名，`location /` 全部转发即可，无需单独配置 `/api` 或 `/uploads`。
+
+### 3. 后台填写微信和可选配置
+
+登录后台 → 系统配置：
 
 ```text
-微信小程序端：创建闪照、查看闪照、查看记录、个人中心、帮助说明。
-后台管理端：数据概览、闪照管理、用户管理、系统配置。
-后端服务：登录鉴权、上传、内容审核、存储、记录、数据清理。
-Docker 部署：单容器内置后端、后台管理端和 MariaDB。
+微信小程序：填入 AppID、AppSecret（小程序登录必填）
+图片审核：可选，支持阿里云/vxlink/helloz/nsfwpy，默认关闭
+存储配置：可选，默认本地存储，可切换腾讯云 COS / 阿里云 OSS
 ```
 
-## Docker 一键部署
+微信配置保存后立即生效，无需重启容器。
 
-镜像地址：
+### 4. 修改小程序域名并发布
 
-```bash
-ghcr.io/qiantingwl/shanzhao:latest
+```text
+1. 修改 shan/utils/config.js 的 DEFAULT_BASE_URL 为第 2 步的 HTTPS 域名
+2. 微信公众平台把 request、uploadFile、downloadFile 合法域名都配置为该域名
+3. 用 HBuilderX 或微信开发者工具发布 shan/ 小程序
 ```
 
-命令行部署：
-
-```bash
-docker run -d --name shanzhao --restart always -p 3000:3000 -v /opt/shanzhao:/app/data ghcr.io/qiantingwl/shanzhao:latest
-```
-
-宝塔 Docker 部署：
+## 宝塔 Docker
 
 ```text
 镜像：ghcr.io/qiantingwl/shanzhao:latest
-容器端口：3000
-服务器端口：3000
-目录挂载：/opt/shanzhao -> /app/data
+端口：3000:3000
+挂载：/opt/shanzhao -> /app/data
 重启策略：always
 ```
 
-访问后台：
+反代用宝塔「网站 → 反向代理」指向 `http://127.0.0.1:3000`，并在配置里加 `client_max_body_size 12m;`。
 
-```text
-http://服务器IP:3000/
+## 更新
+
+```bash
+docker pull ghcr.io/qiantingwl/shanzhao:latest
+docker rm -f shanzhao
+docker run -d --name shanzhao --restart always \
+  -p 3000:3000 -v /opt/shanzhao:/app/data \
+  ghcr.io/qiantingwl/shanzhao:latest
 ```
 
-默认后台账号：
-
-```text
-账号：admin
-密码：admin123
-```
-
-首次登录后请及时修改密码。
-
-## 反向代理
-
-线上使用时建议在宝塔或 Nginx 中开启 HTTPS，并反向代理到：
-
-```text
-http://127.0.0.1:3000
-```
-
-微信小程序后台需要把 `request`、`uploadFile`、`downloadFile` 合法域名配置为你的 HTTPS 域名。
-
-## 数据和备份
-
-Docker 运行数据都在服务器目录：
-
-```text
-/opt/shanzhao
-```
-
-目录内容：
-
-```text
-mysql/      内置 MariaDB 数据
-uploads/    本地上传文件
-runtime/    运行配置和安装锁
-```
-
-迁移服务器或升级前，先备份整个目录：
+数据在 `/opt/shanzhao`，不删目录就不丢数据。迁移前备份：
 
 ```bash
 tar -czf shanzhao-backup.tar.gz /opt/shanzhao
 ```
 
-更新镜像：
-
-```bash
-docker pull ghcr.io/qiantingwl/shanzhao:latest
-docker rm -f shanzhao
-docker run -d --name shanzhao --restart always -p 3000:3000 -v /opt/shanzhao:/app/data ghcr.io/qiantingwl/shanzhao:latest
-```
-
-## 内容审核
-
-后台系统配置中可以自由切换 5 种审核方式：
+## 源码结构
 
 ```text
-阿里云：使用阿里云图片内容安全 SDK，直接审核上传文件。
-vxlink/nsfw_detector：对接 vxlink/nsfw_detector 容器服务。
-helloz/nsfw：对接 helloz/nsfw 容器服务。
-nsfwpy：对接 nsfwpy 容器服务。
-虚假接口：直接放行，仅用于测试。
+backend/   后端 NestJS (API、上传、审核、存储、清理)
+admin/     管理后台 Vue
+shan/      uni-app 小程序
+docker/    Dockerfile + 初始化脚本
 ```
 
-内容审核开关含义：
-
-```text
-1=使用当前选择的审核接口
-0=关闭审核，上传图片直接通过
-```
-
-## 本地源码目录
-
-```text
-backend/      后端 NestJS 源码，负责 API、上传、审核、存储、清理任务。
-admin/        后台管理端 Vue 源码，负责后台页面和配置管理。
-shan/         uni-app 小程序源码，发布前修改接口域名。
-docker/       Docker 镜像构建文件和容器初始化脚本。
-```
-
-关键文件：
-
-```text
-backend/src/common/services/image-audit.service.ts   图片审核服务。
-backend/src/common/services/storage.service.ts       本地/COS/OSS 存储服务。
-backend/src/upload/upload.controller.ts              图片上传、审核、缩略图生成。
-backend/src/config/cleanup.task.ts                   删除数据定时清理任务。
-admin/src/views/sys-config/index.vue                 后台系统配置页面。
-shan/utils/config.js                                 小程序后端域名配置。
-docker/Dockerfile                                    Docker 镜像构建文件。
-docker/entrypoint.sh                                 容器启动和 MariaDB 初始化脚本。
-docker/container-init.sql                            内置数据库表结构。
-```
-
-## 本地开发
-
-后端：
-
-```bash
-cd backend
-npm install
-npm run build
-npm run start:dev
-```
-
-后台：
-
-```bash
-cd admin
-pnpm install
-pnpm build
-pnpm dev
-```
-
-小程序：
-
-```text
-使用 HBuilderX 或微信开发者工具打开 shan/。
-发布前修改 shan/utils/config.js 中的 DEFAULT_BASE_URL。
-```
-
-## 构建 Docker 镜像
+## 构建镜像
 
 ```bash
 docker build -f docker/Dockerfile -t ghcr.io/qiantingwl/shanzhao:latest .
 docker push ghcr.io/qiantingwl/shanzhao:latest
 ```
-
-## 不应提交的内容
-
-```text
-node_modules/
-dist/
-uploads/
-runtime/
-unpackage/
-.env
-deploy.zip
-```
-
-这些内容是依赖、构建产物、运行数据或本地密钥，已经通过 `.gitignore` 忽略。

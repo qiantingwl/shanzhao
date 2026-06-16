@@ -9,7 +9,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { AdminJwtGuard } from '../common/guards/admin-jwt.guard';
+import { AdminJwtGuard } from '../common/guards/admin.guard';
 import { ContentService } from './content.service';
 
 @Controller()

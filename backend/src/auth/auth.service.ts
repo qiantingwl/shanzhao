@@ -12,6 +12,7 @@ import axios from 'axios';
 import * as bcrypt from 'bcrypt';
 import { User } from '../entities/user.entity';
 import { AdminUser } from '../entities/admin-user.entity';
+import { SysConfigService } from '../config/config.service';
 
 interface WxSession {
   openid?: string;
@@ -27,11 +28,23 @@ export class AuthService {
     @InjectRepository(AdminUser) private adminRepo: Repository<AdminUser>,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private sysConfig: SysConfigService,
   ) {}
 
   async wxLogin(code: string) {
-    const appid = this.configService.get<string>('WX_APPID');
-    const secret = this.configService.get<string>('WX_SECRET');
+    const appid =
+      (await this.sysConfig.get('wx_appid')) ||
+      this.configService.get<string>('WX_APPID') ||
+      '';
+    const secret =
+      (await this.sysConfig.get('wx_secret')) ||
+      this.configService.get<string>('WX_SECRET') ||
+      '';
+    if (!appid || !secret) {
+      throw new UnauthorizedException(
+        '微信登录未配置，请在后台系统配置中填写小程序 AppID 和 AppSecret',
+      );
+    }
     const url = `https://api.weixin.qq.com/sns/jscode2session?appid=${appid}&secret=${secret}&js_code=${code}&grant_type=authorization_code`;
 
     const { data } = await axios.get<WxSession>(url);

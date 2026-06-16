@@ -11,8 +11,8 @@ import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { existsSync, mkdirSync, unlinkSync } from 'fs';
 import sharp from 'sharp';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { ImageAuditService } from '../common/services/image-audit.service';
+import { JwtAuthGuard } from '../common/guards/auth.guard';
+import { ImageAuditService } from '../common/services/audit.service';
 import { StorageService } from '../common/services/storage.service';
 
 @UseGuards(JwtAuthGuard)

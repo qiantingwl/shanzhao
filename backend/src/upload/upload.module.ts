@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { UploadController } from './upload.controller';
-import { ImageAuditService } from '../common/services/image-audit.service';
+import { ImageAuditService } from '../common/services/audit.service';
 import { ConfigModule } from '../config/config.module';
 
 @Module({

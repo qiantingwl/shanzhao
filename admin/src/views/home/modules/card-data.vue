@@ -185,7 +185,7 @@ onMounted(loadDashboard);
             <SvgIcon :icon="item.icon" class="text-32px" />
             <CountTo
               :prefix="item.unit"
-              :start-value="1"
+              :start-value="0"
               :end-value="item.value"
               class="text-30px text-white dark:text-dark"
             />

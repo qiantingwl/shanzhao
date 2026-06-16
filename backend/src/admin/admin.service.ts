@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsWhere, Repository, Like, Between, Not } from 'typeorm';
+import { FindOptionsWhere, Repository, Like, Between, In } from 'typeorm';
 import { Flash, FlashStatus } from '../entities/flash.entity';
 import { FlashRecord } from '../entities/flash-record.entity';
 import { User } from '../entities/user.entity';
@@ -139,7 +139,7 @@ export class AdminService {
     ] = await Promise.all([
       this.flashRepo.count({ where: { delFlag: '0' } }),
       this.userRepo.count(),
-      this.recordRepo.count({ where: { recordMode: Not('3') } }),
+      this.recordRepo.count({ where: { recordMode: In(['0', '1']) } }),
       this.flashRepo.count({
         where: { status: FlashStatus.PENDING, delFlag: '0' },
       }),
@@ -150,7 +150,7 @@ export class AdminService {
         where: { createdAt: Between(start, end) },
       }),
       this.recordRepo.count({
-        where: { createdAt: Between(start, end) },
+        where: { recordMode: In(['0', '1']), createdAt: Between(start, end) },
       }),
       this.recordRepo.count({ where: { recordMode: '3' } }),
     ]);

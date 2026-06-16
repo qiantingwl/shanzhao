@@ -8,7 +8,7 @@ import {
   Body,
   UseGuards,
 } from '@nestjs/common';
-import { AdminJwtGuard } from '../common/guards/admin-jwt.guard';
+import { AdminJwtGuard } from '../common/guards/admin.guard';
 import { AdminService } from './admin.service';
 import { FlashStatus } from '../entities/flash.entity';
 import { SysConfigService } from '../config/config.service';

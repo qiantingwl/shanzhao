@@ -34,7 +34,6 @@ RUN npm ci --omit=dev && npm cache clean --force
 
 COPY --from=backend-builder /backend/dist ./dist
 COPY --from=backend-builder /backend/public ./public
-COPY backend/sql ./sql
 COPY docker/container-init.sql ./sql/container-init.sql
 COPY docker/entrypoint.sh ./entrypoint.sh
 

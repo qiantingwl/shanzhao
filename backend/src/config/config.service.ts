@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { SysConfig } from '../entities/config.entity';
 
 const DEFAULTS: Record<string, string> = {
+  wx_appid: '',
+  wx_secret: '',
   default_max_num: '1',
   default_max_sec: '3',
   ad_unlock_enabled: '1',
@@ -51,6 +53,8 @@ const DEFAULTS: Record<string, string> = {
 };
 
 const DEFAULT_REMARKS: Record<string, string> = {
+  wx_appid: '微信小程序 AppID，留空则读取环境变量 WX_APPID',
+  wx_secret: '微信小程序 AppSecret，留空则读取环境变量 WX_SECRET',
   default_max_num: '默认最大查看次数',
   default_max_sec: '默认最大查看秒数',
   ad_unlock_enabled: '广告解锁开关：1=开启，0=关闭',

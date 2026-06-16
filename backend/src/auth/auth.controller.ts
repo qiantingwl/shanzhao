@@ -9,8 +9,8 @@ import {
 } from '@nestjs/common';
 import { IsString, IsOptional } from 'class-validator';
 import { AuthService } from './auth.service';
-import { AdminJwtGuard } from '../common/guards/admin-jwt.guard';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { AdminJwtGuard } from '../common/guards/admin.guard';
+import { JwtAuthGuard } from '../common/guards/auth.guard';
 
 class WxLoginDto {
   @IsString()
