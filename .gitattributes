@@ -1,0 +1,2 @@
+# Bundled admin assets contain intentional spaces inside generated template strings.
+backend/public/admin/assets/* whitespace=-trailing-space

@@ -12,11 +12,11 @@
 			<!-- #endif -->
 		</view>
 
-		<view v-if="loading && list.length === 0" class="empty-state">
+		<view v-if="loading && !loaded && list.length === 0" class="empty-state">
 			<text class="empty-text">加载中…</text>
 		</view>
 
-		<view v-else-if="list.length === 0" class="empty-state">
+		<view v-else-if="loaded && list.length === 0" class="empty-state">
 			<view class="empty-illustration">
 				<view class="cloud cloud-left"></view>
 				<view class="cloud cloud-right"></view>
@@ -70,7 +70,7 @@
 
 <script>
 import { getMyFlashList } from '../../utils/api'
-import { BASE_URL } from '../../utils/config'
+import { getBaseUrl } from '../../utils/config'
 import { formatShort, resolveFileUrl } from '../../utils/format'
 export default {
 	data() {
@@ -79,7 +79,9 @@ export default {
 			total: 0,
 			page: 1,
 			pageSize: 20,
-			loading: false
+			loading: false,
+			loaded: false,
+			requestSeq: 0
 		}
 	},
 	computed: {
@@ -88,41 +90,66 @@ export default {
 		}
 	},
 	onShow() {
-		if (!uni.getStorageSync('token')) return
+		if (!uni.getStorageSync('token')) {
+			this.list = []
+			this.total = 0
+			this.loaded = true
+			return
+		}
 		this.page = 1
-		this.list = []
-		this.loadData()
+		this.loaded = false
+		this.loadData(true)
 	},
 	onPullDownRefresh() {
 		this.page = 1
-		this.list = []
-		this.loadData().then(() => uni.stopPullDownRefresh())
+		this.loaded = false
+		this.loadData(true).then(() => uni.stopPullDownRefresh())
 	},
 	methods: {
-		async loadData() {
+		async loadData(reset = false) {
 			if (this.loading) return
+			const requestPage = reset ? 1 : this.page
+			const seq = ++this.requestSeq
 			this.loading = true
 			try {
-				const res = await getMyFlashList(this.page, this.pageSize)
-				const { list, total } = res.data || res
-				if (this.page === 1) {
+				if (reset) this.page = 1
+				const res = await getMyFlashList(requestPage, this.pageSize)
+				if (seq !== this.requestSeq) return
+				const { list = [], total = 0 } = res.data || res
+				if (requestPage === 1) {
 					this.list = list
 				} else {
 					this.list = this.list.concat(list)
 				}
 				this.total = total
-			} catch (e) {}
-			this.loading = false
+			} catch (e) {
+				if (!reset && this.page > 1) this.page--
+			} finally {
+				if (seq === this.requestSeq) {
+					this.loading = false
+					this.loaded = true
+				}
+			}
 		},
 		loadMore() {
+			if (this.loading || !this.hasMore) return
 			this.page++
 			this.loadData()
 		},
 		thumbSrc(item) {
-			return resolveFileUrl(item.fileThumb, BASE_URL)
+			return resolveFileUrl(item.fileThumb, getBaseUrl())
 		},
 		statusLabel(status) {
-			const map = { published: '已发布', revoked: '已撤回', pending: '审核中' }
+			const map = {
+				published: '已发布',
+				revoked: '已撤回',
+				pending: '审核中',
+				rejected: '已拒绝',
+				'1': '已发布',
+				'2': '已撤回',
+				'0': '审核中',
+				'3': '已拒绝'
+			}
 			return map[status] || status
 		},
 		formatTime(t) {
@@ -146,12 +173,15 @@ export default {
 
 <style scoped>
 .records-page {
-	padding-bottom: 150rpx;
+	padding-bottom: 170rpx;
+	padding-bottom: calc(170rpx + constant(safe-area-inset-bottom));
+	padding-bottom: calc(170rpx + env(safe-area-inset-bottom));
+	box-sizing: border-box;
 }
 
 .flash-list {
 	margin-top: 16rpx;
-	padding-bottom: 40rpx;
+	padding-bottom: 24rpx;
 }
 
 .flash-item {

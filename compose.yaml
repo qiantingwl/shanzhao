@@ -1,0 +1,16 @@
+name: shanzhao
+
+services:
+  shanzhao:
+    image: ghcr.io/qiantingwl/shanzhao:latest
+    container_name: shanzhao
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      TZ: Asia/Shanghai
+    volumes:
+      - shanzhao-data:/app/data
+
+volumes:
+  shanzhao-data:

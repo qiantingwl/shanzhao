@@ -11,5 +11,9 @@
 **/uploads
 **/runtime
 **/mysql-data
+_server_repair
+.release-repo
+RELEASE.md
+*.zip
 *.log
 *.tmp

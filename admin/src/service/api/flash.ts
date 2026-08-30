@@ -10,7 +10,9 @@ export interface FlashItem {
   fileOrigin?: string;
   originFlag: string;
   screenFlag: string;
-  shareFlag: string;
+  iosFlag: string;
+  pcFlag: string;
+  shareBlockFlag: string;
   adFlag: string;
   maxNum: number;
   maxSec: number;

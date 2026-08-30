@@ -12,6 +12,7 @@ import { AuthService } from './auth/auth.service';
 import { TransformInterceptor } from './common/interceptors/response.interceptor';
 import { AllExceptionsFilter } from './common/filters/exception.filter';
 import * as express from 'express';
+import type { NextFunction, Request, Response } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -34,7 +35,7 @@ async function bootstrap() {
   app.use(
     express.static(join(process.cwd(), 'public', 'admin'), { index: false }),
   );
-  app.use((req, res, next) => {
+  app.use((req: Request, res: Response, next: NextFunction) => {
     if (req.path.startsWith('/api/') || req.path.startsWith('/uploads/')) {
       next();
       return;

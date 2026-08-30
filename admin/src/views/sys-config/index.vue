@@ -22,14 +22,14 @@ interface Section {
   items: ConfigItem[];
 }
 
-const AUDIT_LINKS = [
-  {
-    label: '阿里云图片内容安全文档',
-    url: 'https://help.aliyun.com/zh/viapi/use-cases/image-content-security-1'
-  },
-  { label: 'vxlink/nsfw_detector 项目地址', url: 'https://github.com/tmplink/nsfw_detector' },
-  { label: 'helloz/nsfw 项目地址', url: 'https://github.com/helloxz/nsfw' },
-  { label: 'nsfwpy 项目地址', url: 'https://github.com/HG-ha/nsfwpy' }
+const BOOL_OPTIONS = [
+  { label: '开启', value: '1' },
+  { label: '关闭', value: '0' }
+];
+
+const FLASH_MODE_OPTIONS = [
+  { label: '娱乐模式', value: 'entertainment' },
+  { label: '保密模式', value: 'private' }
 ];
 
 const DRIVER_OPTIONS = [
@@ -42,11 +42,129 @@ const AUDIT_DRIVER_OPTIONS = [
   { label: '阿里云', value: 'aliyun' },
   { label: 'vxlink/nsfw_detector', value: 'vxlink' },
   { label: 'helloz/nsfw', value: 'helloz' },
-  { label: 'nsfwpy', value: 'nsfwpy' },
-  { label: '虚假接口', value: 'fake' }
+  { label: 'nsfwpy', value: 'nsfwpy' }
+];
+
+const AUDIT_LINKS = [
+  {
+    label: '阿里云图片内容安全文档',
+    url: 'https://help.aliyun.com/zh/viapi/use-cases/image-content-security-1'
+  },
+  { label: 'vxlink/nsfw_detector 项目地址', url: 'https://github.com/tmplink/nsfw_detector' },
+  { label: 'helloz/nsfw 项目地址', url: 'https://github.com/helloxz/nsfw' },
+  { label: 'nsfwpy 项目地址', url: 'https://github.com/HG-ha/nsfwpy' }
 ];
 
 const SECTIONS: Section[] = [
+  {
+    title: '默认产品模式',
+    items: [
+      {
+        key: 'default_flash_mode',
+        label: '默认产品模式',
+        remark: '用户打开创建页时默认选中的发布模式',
+        type: 'select',
+        options: FLASH_MODE_OPTIONS
+      }
+    ]
+  },
+  {
+    title: '娱乐模式',
+    items: [
+      {
+        key: 'entertainment_origin_enabled',
+        label: '开放来源',
+        remark: '开启后查看者可看到图片来自相册、拍照或聊天记录',
+        type: 'select',
+        options: BOOL_OPTIONS
+      },
+      {
+        key: 'entertainment_screen_enabled',
+        label: '防截屏',
+        remark: '开启后查看页启用防截屏/截图记录',
+        type: 'select',
+        options: BOOL_OPTIONS
+      },
+      {
+        key: 'entertainment_device_block_enabled',
+        label: '禁止 iOS 和 PC 查看',
+        remark: '娱乐模式默认是否禁止 iOS 和 PC 端查看原图；用户创建时仍可单独关闭或开启',
+        type: 'select',
+        options: BOOL_OPTIONS
+      },
+      {
+        key: 'entertainment_share_block_enabled',
+        label: '禁止转发',
+        remark: '开启后娱乐模式默认禁止好友继续转发闪照',
+        type: 'select',
+        options: BOOL_OPTIONS
+      },
+      {
+        key: 'entertainment_ad_enabled',
+        label: '广告解锁',
+        remark: '开启后默认允许查看者看广告增加查看次数',
+        type: 'select',
+        options: BOOL_OPTIONS
+      },
+      {
+        key: 'max_ad_unlock_count',
+        label: '每张图广告解锁次数',
+        remark: '娱乐模式下，每张闪图最多允许查看者看广告增加多少次查看机会'
+      }
+    ]
+  },
+  {
+    title: '保密模式',
+    items: [
+      {
+        key: 'private_origin_enabled',
+        label: '开放来源',
+        remark: '开启后保密模式也显示图片来源',
+        type: 'select',
+        options: BOOL_OPTIONS
+      },
+      {
+        key: 'private_screen_enabled',
+        label: '防截屏',
+        remark: '建议开启；关闭后保密模式也不检测截屏/录屏',
+        type: 'select',
+        options: BOOL_OPTIONS
+      },
+      {
+        key: 'private_device_block_enabled',
+        label: '禁止 iOS 和 PC 查看',
+        remark: '保密模式默认是否禁止 iOS 和 PC 端查看原图；PC 端无法防截图，建议开启',
+        type: 'select',
+        options: BOOL_OPTIONS
+      },
+      {
+        key: 'private_share_block_enabled',
+        label: '禁止转发',
+        remark: '开启后保密模式默认禁止好友继续转发闪照',
+        type: 'select',
+        options: BOOL_OPTIONS
+      },
+      {
+        key: 'private_ad_enabled',
+        label: '广告解锁',
+        remark: '开启后保密模式允许查看者看广告增加查看次数',
+        type: 'select',
+        options: BOOL_OPTIONS
+      },
+      {
+        key: 'private_upload_ad_required',
+        label: '上传看广告',
+        remark: '开启后上传者发布保密模式前必须观看广告',
+        type: 'select',
+        options: BOOL_OPTIONS
+      },
+      {
+        key: 'private_daily_upload_ad_count',
+        label: '每日上传广告次数',
+        remark: '保密模式下，上传者每天最多看几次广告；完成后当天可无限上传保密闪照'
+      }
+    ]
+  },
   {
     title: '微信小程序',
     items: [
@@ -64,6 +182,16 @@ const SECTIONS: Section[] = [
     items: [
       { key: 'default_max_num', label: '默认最大查看次数', remark: '用户创建闪照时的默认次数上限' },
       { key: 'default_max_sec', label: '默认查看时长（秒）', remark: '用户创建闪照时的默认查看秒数' },
+      {
+        key: 'capture_ban_threshold',
+        label: '截图封禁次数',
+        remark: '用户累计截图/录屏达到多少次后自动进入小黑屋；填 0 表示关闭自动封禁'
+      },
+      {
+        key: 'capture_ban_days',
+        label: '截图封禁天数',
+        remark: '触发截图/录屏封禁后，小黑屋封禁多少天'
+      },
       { key: 'audit_enabled', label: '开启内容审核', remark: '1=使用所选审核接口，0=关闭审核直接通过' }
     ]
   },
@@ -73,7 +201,7 @@ const SECTIONS: Section[] = [
       {
         key: 'image_audit_driver',
         label: '审核接口',
-        remark: '上传图片时使用的审核方式；虚假接口会直接放行，仅用于测试',
+        remark: '开启内容审核后，上传图片将使用此处选择的真实审核服务',
         type: 'select',
         options: AUDIT_DRIVER_OPTIONS
       },
@@ -114,7 +242,7 @@ const SECTIONS: Section[] = [
   {
     title: '广告配置',
     items: [
-      { key: 'ad_unlock_enabled', label: '广告解锁功能', remark: '1=开启，0=关闭' },
+      { key: 'ad_unlock_enabled', label: '广告功能总开关', remark: '1=开启，0=关闭' },
       { key: 'ad_rewarded_video_id', label: '激励视频广告位 ID', remark: '微信小程序后台申请的激励视频广告位 ID' },
       { key: 'ad_interstitial_id', label: '插屏广告位 ID', remark: '微信小程序后台申请的插屏广告位 ID' },
       { key: 'ad_banner_id', label: 'Banner 广告位 ID', remark: '微信小程序后台申请的 Banner 广告位 ID' }
@@ -181,7 +309,7 @@ const values = ref<Record<string, string>>({});
 const driver = computed(() => values.value.storage_driver || 'local');
 const isCos = computed(() => driver.value === 'cos');
 const isOss = computed(() => driver.value === 'oss');
-const auditDriver = computed(() => values.value.image_audit_driver || 'fake');
+const auditDriver = computed(() => values.value.image_audit_driver || 'aliyun');
 const isAliyunAudit = computed(() => auditDriver.value === 'aliyun');
 const isVxlinkAudit = computed(() => auditDriver.value === 'vxlink');
 const isHellozAudit = computed(() => auditDriver.value === 'helloz');
@@ -284,7 +412,7 @@ onMounted(loadData);
 
       <div class="audit-links">
         <span>相关链接</span>
-        <a v-for="link in AUDIT_LINKS" :key="link.url" :href="link.url" target="_blank" rel="noreferrer">
+        <a v-for="link in AUDIT_LINKS" :key="link.url" :href="link.url" target="_blank" rel="noopener noreferrer">
           {{ link.label }}
         </a>
       </div>

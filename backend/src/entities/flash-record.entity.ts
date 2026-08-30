@@ -39,6 +39,15 @@ export class FlashRecord {
   @Column({ length: 1, default: '0' })
   screenFlag: string;
 
+  @Column({ length: 20, nullable: true })
+  screenType: string;
+
+  @Column({ type: 'datetime', nullable: true })
+  screenAt: Date;
+
+  @Column({ length: 512, nullable: true })
+  deviceInfo: string;
+
   @CreateDateColumn()
   createdAt: Date;
 }

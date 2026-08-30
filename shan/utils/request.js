@@ -1,7 +1,7 @@
-import { BASE_URL, UPLOAD_URL } from './config'
+import { getBaseUrl, getUploadUrl } from './config'
 
 function buildUrl(url, params) {
-  let fullUrl = BASE_URL + url
+  let fullUrl = getBaseUrl() + url
   if (params && Object.keys(params).length) {
     const qs = Object.entries(params)
       .filter(([, value]) => value !== undefined && value !== null && value !== '')
@@ -59,14 +59,20 @@ export function request(options) {
 
         if (res.statusCode === 401) {
           uni.removeStorageSync('token')
-          uni.showToast({ title: '请先登录', icon: 'none' })
-          reject(new Error('未授权'))
+          uni.removeStorageSync('userInfo')
+          const msg = pickMessage(res.data, '登录已失效，请重新登录')
+          uni.showToast({ title: msg, icon: 'none', duration: 3000 })
+          const error = new Error(msg)
+          error.toastShown = true
+          reject(error)
           return
         }
 
         const msg = pickMessage(res.data, `请求失败(${res.statusCode})`)
-        uni.showToast({ title: msg, icon: 'none' })
-        reject(new Error(msg))
+        uni.showToast({ title: msg, icon: 'none', duration: 3000 })
+        const error = new Error(msg)
+        error.toastShown = true
+        reject(error)
       },
       fail(err) {
         uni.showToast({ title: '网络异常，请稍后重试', icon: 'none' })
@@ -81,7 +87,7 @@ export function uploadImage(filePath) {
     const token = uni.getStorageSync('token')
 
     uni.uploadFile({
-      url: UPLOAD_URL,
+      url: getUploadUrl(),
       filePath,
       name: 'file',
       header: token ? { Authorization: `Bearer ${token}` } : {},
@@ -93,16 +99,20 @@ export function uploadImage(filePath) {
         }
 
         const msg = pickMessage(res.data, `上传失败(${res.statusCode})`)
-        uni.showToast({ title: msg, icon: 'none' })
         const error = new Error(msg)
-        error.toastShown = true
+        error.modalTitle = '上传失败'
+        error.modalConfirmText = '我知道了'
+        if (res.statusCode === 401) {
+          uni.removeStorageSync('token')
+          uni.removeStorageSync('userInfo')
+        }
         reject(error)
       },
       fail(err) {
         const msg = err && err.errMsg ? err.errMsg : '上传失败，请重试'
-        uni.showToast({ title: msg, icon: 'none' })
         const error = new Error(msg)
-        error.toastShown = true
+        error.modalTitle = '上传失败'
+        error.modalConfirmText = '我知道了'
         reject(error)
       }
     })

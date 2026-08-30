@@ -23,7 +23,7 @@ declare module "@elegant-router/types" {
     "flash-manage": "/flash-manage";
     "home": "/home";
     "iframe-page": "/iframe-page/:url";
-    "login": "/login/:module(pwd-login|code-login|register|reset-pwd|bind-wechat)?";
+    "login": "/login";
     "sys-config": "/sys-config";
     "user-manage": "/user-manage";
   };

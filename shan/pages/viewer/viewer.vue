@@ -34,6 +34,16 @@
 			<text class="hint-sub">该闪照已被撤回或删除</text>
 		</view>
 
+		<view v-else-if="phase === 'pc-blocked'" class="center-box">
+			<text class="hint-title">请使用手机查看</text>
+			<text class="hint-sub">当前闪照已禁止 PC 查看，请使用手机打开。</text>
+		</view>
+
+		<view v-else-if="phase === 'ios-blocked'" class="center-box">
+			<text class="hint-title">请使用安卓手机查看</text>
+			<text class="hint-sub">当前闪照已禁止 iOS 查看，避免截图保存原图。</text>
+		</view>
+
 		<!-- 阶段：准备查看（模糊预览） -->
 		<view
 			v-else-if="phase === 'ready'"
@@ -48,11 +58,12 @@
 			<view class="ready-overlay">
 				<text class="ready-title">你收到了一张闪照</text>
 				<text class="ready-sub">查看后将被记录 · 最多可看 {{ remainTimes }} 次</text>
+				<text v-if="showOrigin" class="origin-tip">来源：{{ originText }}</text>
 				<!-- #ifdef MP-WEIXIN -->
 				<text v-if="flash.screenFlag === '1'" class="warn-tip">截屏将被记录</text>
 				<!-- #endif -->
 				<text class="hold-view-tip">{{ pressingView ? '正在准备查看…' : '按住即可查看' }}</text>
-				<text v-if="flash.shareFlag !== '1'" class="no-share-tip">此闪照禁止转发</text>
+				<text v-if="flash.shareBlockFlag === '1'" class="no-share-tip">此闪照禁止转发</text>
 			</view>
 		</view>
 
@@ -86,8 +97,8 @@
 </template>
 
 <script>
-import { wxLogin, getFlashForViewer, recordView, adUnlock, getPublicConfig, recordShare, getRemain } from '../../utils/api'
-import { BASE_URL } from '../../utils/config'
+import { wxLogin, getFlashForViewer, recordView, updateViewRecord, adUnlock, getPublicConfig, recordShare, getRemain } from '../../utils/api'
+import { getBaseUrl } from '../../utils/config'
 import { resolveFileUrl } from '../../utils/format'
 
 export default {
@@ -105,17 +116,27 @@ export default {
 			viewedSec: 0,
 			hasScreenshot: false,
 			hasScreenRecord: false,
+			isIOS: false,
+			isPC: false,
 			adEnabled: false,
 			adUnitId: '',
+			maxAdUnlockCount: 3,
+			adUnlocks: 0,
 			adLoading: false,
 			pressingView: false,
 			viewRecorded: false,
+			currentRecordId: '',
 			shareTitle: '对方发送了1张照片，点击查看~',
 			_timer: null,
 			_viewStart: 0,
 			_screenListener: null,
 			_recordListener: null,
-			_adShowing: false
+			_captureEnding: false,
+			systemInfo: null,
+			_adShowing: false,
+			_initPromise: null,
+			_startingView: false,
+			_finishingView: false
 		}
 	},
 	computed: {
@@ -127,13 +148,25 @@ export default {
 			return `conic-gradient(#2f7bff ${this.countdownPct}%, rgba(255, 255, 255, 0.22) 0)`
 		},
 		canAdUnlock() {
-			return this.adEnabled && !!this.adUnitId
+			return this.adEnabled && this.flash && this.flash.adFlag === '1' && !!this.adUnitId && this.adUnlocks < this.maxAdUnlockCount
 		},
 		showHomeButton() {
-			return ['ready', 'limit', 'done', 'gone', 'login'].includes(this.phase)
+			return ['ready', 'limit', 'done', 'gone', 'login', 'pc-blocked', 'ios-blocked'].includes(this.phase)
+		},
+		showOrigin() {
+			return this.flash && this.flash.originFlag === '1'
+		},
+		originText() {
+			const map = {
+				'0': '拍照',
+				'1': '相册',
+				'2': '聊天记录'
+			}
+			return map[this.flash && this.flash.fileOrigin] || '未知'
 		}
 	},
 	onLoad(options) {
+		this.initSystemInfo()
 		this.flashId = options.id || ''
 		if (!this.flashId) {
 			this.phase = 'gone'
@@ -142,12 +175,15 @@ export default {
 		this.init()
 	},
 	onShow() {
-		if (this.flashId && this.phase !== 'viewing') {
+		this.updateShareMenuState()
+		if (this.flashId && !this._initPromise && (this.phase === 'loading' || !this.flash)) {
 			this.init()
 		}
 	},
 	onUnload() {
 		this.clearTimer()
+		this.unbindCaptureListeners()
+		this.restoreCaptureEffect()
 	},
 	onHide() {
 		if (this.phase === 'viewing') {
@@ -156,33 +192,172 @@ export default {
 	},
 	methods: {
 		async init() {
+			if (this._initPromise) return this._initPromise
 			this.phase = 'loading'
-			try {
-				const [flashRes, cfgRes] = await Promise.all([
+			const token = uni.getStorageSync('token')
+			this._initPromise = (async () => {
+				const requests = [
 					getFlashForViewer(this.flashId),
 					getPublicConfig()
-				])
-				this.flash = flashRes.data || flashRes
-				const cfg = cfgRes.data || cfgRes
+				]
+				if (token) requests.push(getRemain(this.flashId))
+				const results = await Promise.all(requests)
+				this.flash = results[0].data || results[0]
+				const cfg = results[1].data || results[1]
 				this.adEnabled = cfg.ad_unlock_enabled === '1'
 				this.adUnitId = cfg.ad_rewarded_video_id || ''
+				this.maxAdUnlockCount = Math.max(0, parseInt(cfg.max_ad_unlock_count || '3', 10) || 0)
 				this.shareTitle = cfg.share_title || this.shareTitle
-				this.imgSrc = resolveFileUrl(this.flash.filePath, BASE_URL)
-				this.blurSrc = resolveFileUrl(this.flash.fileMasai || this.flash.fileThumb || this.flash.filePath, BASE_URL)
-				this.checkLoginAndLoad()
+				this.imgSrc = resolveFileUrl(this.flash.filePath, getBaseUrl())
+				this.blurSrc = resolveFileUrl(this.flash.fileMasai || this.flash.fileThumb || this.flash.filePath, getBaseUrl())
+				this.updateShareMenuState()
+				if (this.shouldBlockPcView()) {
+					this.phase = 'pc-blocked'
+					return
+				}
+				if (this.shouldBlockIosView()) {
+					this.phase = 'ios-blocked'
+					return
+				}
+				this.enableCaptureHidden()
+				if (!token) {
+					this.phase = 'login'
+					return
+				}
+				const remainData = results[2].data || results[2]
+				this.remainTimes = remainData.remain
+				this.viewedCount = remainData.total - remainData.remain
+				this.adUnlocks = remainData.adUnlocks || 0
+				this.phase = remainData.remain <= 0 ? 'limit' : 'ready'
+			})()
+			try {
+				await this._initPromise
 			} catch (e) {
 				this.phase = 'gone'
+			} finally {
+				this._initPromise = null
 			}
 		},
-		checkLoginAndLoad() {
-			const token = uni.getStorageSync('token')
-			if (!token) {
-				this.phase = 'login'
+		initSystemInfo() {
+			// #ifdef MP-WEIXIN
+			try {
+				if (!this.canUseWxApi('getSystemInfoSync')) return
+				const info = wx.getSystemInfoSync()
+				this.systemInfo = info
+				const platformText = `${info.platform || ''} ${info.system || ''} ${info.model || ''}`.toLowerCase()
+				this.isIOS = /ios/.test(platformText)
+				this.isPC = /windows|mac|devtools/.test(platformText)
+			} catch {
+				this.isIOS = false
+				this.isPC = false
+				this.systemInfo = null
+			}
+			// #endif
+		},
+		canUseWxApi(apiName) {
+			// #ifdef MP-WEIXIN
+			if (typeof wx === 'undefined' || typeof wx[apiName] !== 'function') return false
+			try {
+				if (typeof wx.canIUse === 'function') return !!wx.canIUse(apiName) || typeof wx[apiName] === 'function'
+			} catch {}
+			return true
+			// #endif
+			// #ifndef MP-WEIXIN
+			return false
+			// #endif
+		},
+		shouldBlockPcView() {
+			return this.isPC && this.flash && this.flash.pcFlag === '1'
+		},
+		shouldBlockIosView() {
+			return this.isIOS && this.flash && this.flash.iosFlag === '1'
+		},
+		updateShareMenuState() {
+			// #ifdef MP-WEIXIN
+			if (!this.flash || this.flash.shareBlockFlag === '1') {
+				if (this.canUseWxApi('hideShareMenu')) {
+					wx.hideShareMenu({
+						menus: ['shareAppMessage', 'shareTimeline']
+					})
+				}
+				if (this.canUseWxApi('updateShareMenu')) {
+					wx.updateShareMenu({
+						withShareTicket: true,
+						isPrivateMessage: false
+					})
+				}
 				return
 			}
-			this.calcRemain()
+			if (this.canUseWxApi('showShareMenu')) {
+				wx.showShareMenu({
+					withShareTicket: true,
+					menus: ['shareAppMessage']
+				})
+			}
+			if (this.canUseWxApi('updateShareMenu')) {
+				wx.updateShareMenu({
+					withShareTicket: true,
+					isPrivateMessage: false
+				})
+			}
+			// #endif
 		},
-		async doLogin() {
+		bindCaptureListeners() {
+			// #ifdef MP-WEIXIN
+			if (!this._screenListener && this.canUseWxApi('onUserCaptureScreen')) {
+				this._screenListener = () => {
+					if (!this.shouldHandleCapture()) return
+					this.hasScreenshot = true
+					this.handleScreenshotDetected()
+				}
+				wx.onUserCaptureScreen(this._screenListener)
+			}
+			if (!this._recordListener && this.canUseWxApi('onScreenRecordingStateChanged')) {
+				this._recordListener = (res) => {
+					if (!['on', 'start'].includes(res.state) || !this.shouldHandleCapture()) return
+					this.hasScreenRecord = true
+					uni.showToast({ title: '检测到录屏，查看已结束', icon: 'none' })
+					this.handleCaptureDetected()
+				}
+				wx.onScreenRecordingStateChanged(this._recordListener)
+			}
+			// #endif
+		},
+		unbindCaptureListeners() {
+			// #ifdef MP-WEIXIN
+			if (this._screenListener && this.canUseWxApi('offUserCaptureScreen')) {
+				wx.offUserCaptureScreen(this._screenListener)
+				this._screenListener = null
+			}
+			if (this._recordListener && this.canUseWxApi('offScreenRecordingStateChanged')) {
+				wx.offScreenRecordingStateChanged(this._recordListener)
+				this._recordListener = null
+			}
+			// #endif
+		},
+		shouldHandleCapture() {
+			return this.phase === 'viewing' && this.flash && this.flash.screenFlag === '1' && !this._captureEnding
+		},
+		restoreCaptureEffect() {
+			// #ifdef MP-WEIXIN
+			if (this.canUseWxApi('setVisualEffectOnCapture')) {
+				wx.setVisualEffectOnCapture({
+					visualEffect: 'none'
+				})
+			}
+			// #endif
+		},
+		enableCaptureHidden() {
+			// #ifdef MP-WEIXIN
+			if (!this.flash || this.flash.screenFlag !== '1') return
+			if (this.canUseWxApi('setVisualEffectOnCapture')) {
+				wx.setVisualEffectOnCapture({
+					visualEffect: 'hidden'
+				})
+			}
+			// #endif
+		},
+		doLogin() {
 			uni.login({
 				success: async (loginRes) => {
 					try {
@@ -201,28 +376,21 @@ export default {
 		async calcRemain() {
 			try {
 				const res = await getRemain(this.flashId)
-				const { remain, total } = res.data || res
-				this.remainTimes = remain
-				this.viewedCount = total - remain
-				if (remain <= 0) {
-					this.phase = 'limit'
-					return
-				}
+				const data = res.data || res
+				this.remainTimes = data.remain
+				this.viewedCount = data.total - data.remain
+				this.adUnlocks = data.adUnlocks || 0
+				this.phase = data.remain <= 0 ? 'limit' : 'ready'
 			} catch {
-				this.remainTimes = this.flash.maxNum
+				this.remainTimes = this.flash ? this.flash.maxNum : 1
+				this.phase = 'ready'
 			}
-			this.phase = 'ready'
 		},
 		async startView() {
-			try {
-				const res = await getFlashForViewer(this.flashId)
-				this.flash = res.data || res
-				this.imgSrc = resolveFileUrl(this.flash.filePath, BASE_URL)
-				this.blurSrc = resolveFileUrl(this.flash.fileMasai || this.flash.fileThumb || this.flash.filePath, BASE_URL)
-			} catch (e) {
-				this.phase = 'gone'
-				return
-			}
+			if (this._startingView || this.phase !== 'ready' || !this.flash) return
+			this._startingView = true
+			this.unbindCaptureListeners()
+			this.currentRecordId = ''
 			try {
 				const recordRes = await recordView(this.flashId, {
 					viewSec: this.flash.maxSec,
@@ -231,12 +399,16 @@ export default {
 				const recordData = recordRes.data || recordRes
 				if (recordData && recordData.canView === false) {
 					this.phase = 'limit'
+					this._startingView = false
 					return
 				}
+				this.currentRecordId = recordData.recordId || ''
 			} catch (e) {
 				this.phase = 'limit'
+				this._startingView = false
 				return
 			}
+			this._startingView = false
 			this.phase = 'viewing'
 			this.viewRecorded = true
 			this.countdownSec = this.flash.maxSec
@@ -247,34 +419,15 @@ export default {
 
 			// #ifdef MP-WEIXIN
 			if (this.flash.screenFlag === '1') {
-				if (wx.setVisualEffectOnCapture) {
-					wx.setVisualEffectOnCapture({
-						visualEffect: 'hidden'
-					})
-				}
-				this._screenListener = () => {
-					this.hasScreenshot = true
-					uni.showToast({ title: '检测到截屏，查看已结束', icon: 'none' })
-					this.finishView()
-				}
-				wx.onUserCaptureScreen(this._screenListener)
-				this._recordListener = (res) => {
-					if (res.state === 'on') {
-						this.hasScreenRecord = true
-						uni.showToast({ title: '检测到录屏，查看已结束', icon: 'none' })
-						this.finishView()
-					}
-				}
-				if (wx.onScreenRecordingStateChanged) {
-					wx.onScreenRecordingStateChanged(this._recordListener)
-				}
-				if (wx.getScreenRecordingState) {
+				this.enableCaptureHidden()
+				this.bindCaptureListeners()
+				if (this.canUseWxApi('getScreenRecordingState')) {
 					wx.getScreenRecordingState({
 						success: (res) => {
-							if (res.state === 'on') {
+							if (['on', 'start'].includes(res.state)) {
 								this.hasScreenRecord = true
 								uni.showToast({ title: '正在录屏，无法查看', icon: 'none' })
-								this.finishView()
+								this.handleCaptureDetected()
 							}
 						}
 					})
@@ -283,42 +436,88 @@ export default {
 			// #endif
 
 			this._timer = setInterval(() => {
+				if (this.countdownSec <= 1) {
+					this.countdownSec = 0
+					this.countdownPct = 0
+					this.finishView()
+					return
+				}
 				this.countdownSec--
 				this.countdownPct = (this.countdownSec / this.flash.maxSec) * 100
-				if (this.countdownSec <= 0) {
-					this.finishView()
-				}
 			}, 1000)
 		},
 		async finishView() {
-			this.clearTimer()
-			const elapsed = Math.round((Date.now() - this._viewStart) / 1000)
-			this.viewedSec = Math.max(1, Math.min(elapsed, this.flash.maxSec))
+			if (this._finishingView || !this.flash) return
+			this._finishingView = true
+			try {
+				this.clearTimer()
+				this._captureEnding = false
+				if (this.phase === 'viewing') {
+					this.phase = 'done'
+				}
+				const elapsed = Math.round((Date.now() - this._viewStart) / 1000)
+				this.viewedSec = Math.max(1, Math.min(elapsed, this.flash.maxSec))
+				this.syncViewRecord()
+				this.unbindCaptureListeners()
 
-			// #ifdef MP-WEIXIN
-			if (this._screenListener) {
-				wx.offUserCaptureScreen(this._screenListener)
-				this._screenListener = null
+				this.remainTimes = Math.max(0, this.remainTimes - 1)
+				if (this.remainTimes <= 0) {
+					await this.calcRemain()
+					return
+				}
+				this.phase = 'done'
+			} finally {
+				this._finishingView = false
 			}
-			if (this._recordListener && wx.offScreenRecordingStateChanged) {
-				wx.offScreenRecordingStateChanged(this._recordListener)
-				this._recordListener = null
+		},
+		syncViewRecord() {
+			if (!this.currentRecordId) return
+			const screenFlag = this.hasScreenshot || this.hasScreenRecord ? '1' : '0'
+			const elapsed = this._viewStart ? Math.round((Date.now() - this._viewStart) / 1000) : this.flash.maxSec
+			const viewSec = Math.max(1, Math.min(this.viewedSec || elapsed, this.flash.maxSec))
+			updateViewRecord(this.currentRecordId, {
+				viewSec,
+				screenFlag,
+				...this.getCaptureMeta()
+			}).catch(() => {})
+		},
+		getCaptureMeta() {
+			if (!this.hasScreenshot && !this.hasScreenRecord) return {}
+			const info = this.systemInfo || {}
+			const parts = [
+				info.brand,
+				info.model,
+				info.platform,
+				info.system,
+				info.version,
+				info.SDKVersion
+			].filter(Boolean)
+			return {
+				screenType: this.hasScreenRecord ? 'record' : 'screenshot',
+				screenAt: new Date().toISOString(),
+				deviceInfo: parts.join(' / ')
 			}
-			if (wx.setVisualEffectOnCapture) {
-				wx.setVisualEffectOnCapture({
-					visualEffect: 'none'
-				})
-			}
-			// #endif
-
-			this.remainTimes = Math.max(0, this.remainTimes - 1)
-			if (this.remainTimes <= 0) {
-				await this.calcRemain()
-				return
-			}
-			this.phase = 'done'
+		},
+		handleCaptureDetected() {
+			if (this._captureEnding) return
+			this._captureEnding = true
+			this.syncViewRecord()
+			setTimeout(() => this.finishView(), 120)
+		},
+		handleScreenshotDetected() {
+			if (this._captureEnding) return
+			this._captureEnding = true
+			this.syncViewRecord()
+			this.finishView()
+			uni.showModal({
+				title: '截图已记录',
+				content: '系统已记录本次截图信息，发送者将可在浏览记录中查看。图片含有暗水印，请勿传播或二次转发。',
+				confirmText: '我已知晓',
+				showCancel: false
+			})
 		},
 		resetReady() {
+			if (this.remainTimes <= 0) return
 			this.phase = 'ready'
 		},
 		goHome() {
@@ -377,7 +576,7 @@ export default {
 		}
 	},
 	onShareAppMessage() {
-		if (this.flash && this.flash.shareFlag !== '1') {
+		if (this.flash && this.flash.shareBlockFlag === '1') {
 			return { title: '暂不支持转发' }
 		}
 		if (this.flashId) {
@@ -386,7 +585,7 @@ export default {
 		return {
 			title: this.shareTitle,
 			path: `/pages/viewer/viewer?id=${this.flashId}`,
-			imageUrl: this.flash ? resolveFileUrl(this.flash.fileShare || this.flash.fileThumb || this.flash.filePath, BASE_URL) : ''
+			imageUrl: this.flash ? resolveFileUrl(this.flash.fileShare || this.flash.fileThumb || this.flash.filePath, getBaseUrl()) : ''
 		}
 	}
 }
@@ -555,6 +754,14 @@ export default {
 	font-size: 24rpx;
 	color: #ffbc42;
 	background: rgba(255, 188, 66, 0.15);
+	padding: 8rpx 24rpx;
+	border-radius: 20rpx;
+}
+
+.origin-tip {
+	font-size: 24rpx;
+	color: rgba(255, 255, 255, 0.78);
+	background: rgba(255, 255, 255, 0.12);
 	padding: 8rpx 24rpx;
 	border-radius: 20rpx;
 }

@@ -53,11 +53,23 @@ export class Flash {
   @Column({ length: 1, default: '1' })
   screenFlag: string;
 
+  @Column({ length: 1, default: '0' })
+  iosFlag: string;
+
   @Column({ length: 1, default: '1' })
-  shareFlag: string;
+  pcFlag: string;
+
+  @Column({ length: 1, default: '0' })
+  shareBlockFlag: string;
 
   @Column({ length: 1, default: '0' })
   adFlag: string;
+
+  @Column({ length: 20, default: 'entertainment' })
+  mode: string;
+
+  @Column({ length: 128, nullable: true })
+  activityId: string;
 
   @Column({ default: 1 })
   maxNum: number;

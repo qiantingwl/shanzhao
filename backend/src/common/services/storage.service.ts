@@ -16,7 +16,11 @@ export class StorageService {
 
   private async getDriver(): Promise<string> {
     const v = await this.sysConfig.get('storage_driver');
-    return (v || this.cfg.get<string>('STORAGE_DRIVER') || 'local').toLowerCase();
+    return (
+      v ||
+      this.cfg.get<string>('STORAGE_DRIVER') ||
+      'local'
+    ).toLowerCase();
   }
 
   private async val(sysKey: string, envKey: string): Promise<string> {
@@ -69,7 +73,9 @@ export class StorageService {
         },
         (err, data) => {
           if (err) return reject(err);
-          resolve(cdn ? this.joinPublicUrl(cdn, key) : `https://${data.Location}`);
+          resolve(
+            cdn ? this.joinPublicUrl(cdn, key) : `https://${data.Location}`,
+          );
         },
       );
     });
@@ -98,9 +104,16 @@ export class StorageService {
 
   async remove(fileUrl: string): Promise<void> {
     const driver = await this.getDriver();
+    const isRemoteUrl = /^https?:\/\//i.test(fileUrl);
     const key = this.extractObjectKey(fileUrl);
 
     try {
+      if (driver === 'local' && isRemoteUrl) {
+        this.logger.warn(
+          `[StorageService.remove] file is remote URL but driver=local, skipping: ${fileUrl}`,
+        );
+        return;
+      }
       switch (driver) {
         case 'cos':
           await this.removeCos(key);
@@ -118,10 +131,7 @@ export class StorageService {
 
   private async removeCos(key: string): Promise<void> {
     const COS = require('cos-nodejs-sdk-v5') as new (opts: object) => {
-      deleteObject: (
-        params: object,
-        cb: (err: Error | null) => void,
-      ) => void;
+      deleteObject: (params: object, cb: (err: Error | null) => void) => void;
     };
     const [cosId, cosKey, cosBucket, cosRegion] = await Promise.all([
       this.val('storage_cos_secret_id', 'COS_SECRET_ID'),

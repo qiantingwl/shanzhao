@@ -38,7 +38,8 @@
 			<view v-if="records.length === 0" class="rec-empty">暂无查看记录</view>
 			<view v-else>
 				<view class="table-head">
-					<text>截屏</text>
+					<text>风险</text>
+					<text>查看者</text>
 					<text>时长</text>
 					<text>时间</text>
 				</view>
@@ -47,9 +48,11 @@
 					:key="row.id"
 					class="table-row"
 				>
-					<text :class="row.screenFlag === '1' ? 'tag-danger' : 'tag-safe'">{{ row.screenFlag === '1' ? '有' : '无' }}</text>
+					<text :class="row.screenFlag === '1' ? 'tag-danger' : 'tag-safe'">{{ captureLabel(row) }}</text>
+					<text class="rec-user">{{ viewerLabel(row) }}</text>
 					<text>{{ row.viewSec }}秒</text>
-					<text class="rec-time">{{ formatShort(row.createdAt) }}</text>
+					<text class="rec-time">{{ formatShort(row.screenAt || row.createdAt) }}</text>
+					<text v-if="row.screenFlag === '1'" class="rec-device">{{ row.deviceInfo || '未知设备' }}</text>
 				</view>
 			</view>
 		</view>
@@ -82,7 +85,7 @@
 
 <script>
 import { getFlashDetail, getFlashRecords, deleteFlash, revokeFlash, recordShare, getPublicConfig } from '../../utils/api'
-import { BASE_URL } from '../../utils/config'
+import { getBaseUrl } from '../../utils/config'
 import { formatTime as fmtTime, formatShort, resolveFileUrl } from '../../utils/format'
 export default {
 	data() {
@@ -96,10 +99,13 @@ export default {
 			recordTotal: 0,
 			shareTitle: '对方发送了1张照片，点击查看~',
 			showDeleteDialog: false,
-			showRevokeDialog: false
+			showRevokeDialog: false,
+			_screenListener: null,
+			_recordListener: null
 		}
 	},
 	onLoad(options) {
+		this.enableCaptureProtection()
 		this.id = options.id || ''
 		this.thumbUrl = options.thumbUrl ? decodeURIComponent(options.thumbUrl) : ''
 		if (options.createdAt) {
@@ -111,7 +117,76 @@ export default {
 		}
 		this.loadConfig()
 	},
+	onUnload() {
+		this.disableCaptureProtection()
+	},
+	onHide() {
+		this.disableCaptureProtection()
+	},
+	onShow() {
+		this.enableCaptureProtection()
+		this.updateShareMenuState()
+	},
 	methods: {
+		updateShareMenuState() {
+			// #ifdef MP-WEIXIN
+			if (wx.showShareMenu) {
+				wx.showShareMenu({
+					withShareTicket: true,
+					menus: ['shareAppMessage']
+				})
+			}
+			if (wx.updateShareMenu) {
+				const opts = {
+					withShareTicket: true,
+					isPrivateMessage: false
+				}
+				if (this.flash && this.flash.shareBlockFlag === '1' && this.flash.activityId) {
+					opts.isPrivateMessage = true
+					opts.activityId = this.flash.activityId
+				}
+				wx.updateShareMenu({
+					...opts
+				})
+			}
+			// #endif
+		},
+		enableCaptureProtection() {
+			// #ifdef MP-WEIXIN
+			if (wx.setVisualEffectOnCapture) {
+				wx.setVisualEffectOnCapture({ visualEffect: 'hidden' })
+			}
+			if (!this._screenListener) {
+				this._screenListener = () => {
+					uni.showToast({ title: '当前页面禁止截屏', icon: 'none' })
+				}
+				wx.onUserCaptureScreen(this._screenListener)
+			}
+			if (!this._recordListener && wx.onScreenRecordingStateChanged) {
+				this._recordListener = (res) => {
+					if (res.state === 'on') {
+						uni.showToast({ title: '当前页面禁止录屏', icon: 'none' })
+					}
+				}
+				wx.onScreenRecordingStateChanged(this._recordListener)
+			}
+			// #endif
+		},
+		disableCaptureProtection() {
+			// #ifdef MP-WEIXIN
+			if (this._screenListener) {
+				wx.offUserCaptureScreen(this._screenListener)
+				this._screenListener = null
+			}
+			if (this._recordListener && wx.offScreenRecordingStateChanged) {
+				wx.offScreenRecordingStateChanged(this._recordListener)
+				this._recordListener = null
+			}
+			if (wx.setVisualEffectOnCapture) {
+				wx.setVisualEffectOnCapture({ visualEffect: 'none' })
+			}
+			// #endif
+		},
 		async loadConfig() {
 			try {
 				const res = await getPublicConfig()
@@ -124,11 +199,12 @@ export default {
 				const res = await getFlashDetail(this.id)
 				const flash = res.data || res
 				this.flash = flash
+				this.updateShareMenuState()
 				this.viewCount = flash.viewCount || 0
 				if (flash.createdAt) this.createdAt = this.formatTime(flash.createdAt)
 				const shareImage = flash.fileShare || flash.fileThumb
 				if (shareImage && shareImage !== flash.filePath) {
-					this.thumbUrl = resolveFileUrl(shareImage, BASE_URL)
+					this.thumbUrl = resolveFileUrl(shareImage, getBaseUrl())
 				}
 			} catch (e) {}
 		},
@@ -139,6 +215,16 @@ export default {
 				this.records = list
 				this.recordTotal = total
 			} catch (e) {}
+		},
+		captureLabel(row) {
+			if (row.screenFlag !== '1') return '无'
+			return row.screenType === 'record' ? '录屏' : '截图'
+		},
+		viewerLabel(row) {
+			const user = row.user || {}
+			if (user.nickname) return user.nickname
+			if (user.openid) return `用户${user.openid.slice(-6)}`
+			return row.userId ? `用户${row.userId.slice(-6)}` : '未知用户'
 		},
 		back() {
 			uni.navigateBack({ fail: () => uni.redirectTo({ url: '/pages/create/create' }) })
@@ -178,8 +264,9 @@ export default {
 		if (this.id && this.id !== 'preview') {
 			recordShare(this.id).catch(() => {})
 		}
+		this.updateShareMenuState()
 		const shareImage = this.flash && (this.flash.fileShare || this.flash.fileThumb) && (this.flash.fileShare || this.flash.fileThumb) !== this.flash.filePath
-			? resolveFileUrl(this.flash.fileShare || this.flash.fileThumb, BASE_URL)
+			? resolveFileUrl(this.flash.fileShare || this.flash.fileThumb, getBaseUrl())
 			: this.thumbUrl
 		return {
 			title: this.shareTitle,
@@ -478,7 +565,8 @@ export default {
 
 .table-head {
 	display: grid;
-	grid-template-columns: 80rpx 100rpx 1fr;
+	grid-template-columns: 88rpx 1fr 96rpx 180rpx;
+	column-gap: 12rpx;
 	padding: 16rpx 22rpx;
 	border-bottom: 1rpx solid #edf0f5;
 	font-size: 24rpx;
@@ -487,7 +575,9 @@ export default {
 
 .table-row {
 	display: grid;
-	grid-template-columns: 80rpx 100rpx 1fr;
+	grid-template-columns: 88rpx 1fr 96rpx 180rpx;
+	column-gap: 12rpx;
+	align-items: center;
 	padding: 18rpx 22rpx;
 	border-bottom: 1rpx solid #f5f5f5;
 	font-size: 26rpx;
@@ -507,6 +597,22 @@ export default {
 .rec-time {
 	color: #b8bdc9;
 	font-size: 24rpx;
+}
+
+.rec-user {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.rec-device {
+	grid-column: 1 / -1;
+	margin-top: 8rpx;
+	color: #9aa1ad;
+	font-size: 22rpx;
+	line-height: 1.45;
+	word-break: break-all;
 }
 
 .rec-empty {

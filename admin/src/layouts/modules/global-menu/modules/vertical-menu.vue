@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import type { RouteKey } from '@elegant-router/types';
 import { SimpleScrollbar } from '@sa/materials';
 import { GLOBAL_SIDER_MENU_ID } from '@/constants/app';
 import { useAppStore } from '@/store/modules/app';
@@ -23,6 +24,14 @@ const { selectedKey } = useMenu();
 const inverted = computed(() => !themeStore.darkMode && themeStore.sider.inverted);
 
 const expandedKeys = ref<string[]>([]);
+
+async function handleMenuSelect(key: string) {
+  await routerPushByKeyWithMetaQuery(key as RouteKey);
+
+  if (appStore.isMobile) {
+    appStore.setSiderCollapse(true);
+  }
+}
 
 function updateExpandedKeys() {
   if (appStore.siderCollapse || !selectedKey.value) {
@@ -54,7 +63,7 @@ watch(
         :options="routeStore.menus"
         :inverted="inverted"
         :indent="18"
-        @update:value="routerPushByKeyWithMetaQuery"
+        @update:value="handleMenuSelect"
       />
     </SimpleScrollbar>
   </Teleport>

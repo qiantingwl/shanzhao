@@ -9,13 +9,14 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { AdminJwtStrategy } from './strategies/admin-jwt.strategy';
 import { User } from '../entities/user.entity';
 import { AdminUser } from '../entities/admin-user.entity';
+import { UserBan } from '../entities/user-ban.entity';
 import { ConfigModule as SysConfigModule } from '../config/config.module';
 
 @Module({
   imports: [
     PassportModule,
     SysConfigModule,
-    TypeOrmModule.forFeature([User, AdminUser]),
+    TypeOrmModule.forFeature([User, AdminUser, UserBan]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({

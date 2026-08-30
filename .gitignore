@@ -27,4 +27,8 @@ Thumbs.db
 
 # Release repo and archives (should not be committed)
 .release-repo/
+__git_push_worktree_*/
+.playwright-cli/
+*.patch
 *.zip
+/RELEASE.md

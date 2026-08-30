@@ -33,8 +33,12 @@ CREATE TABLE IF NOT EXISTS `flash` (
   `fileOrigin` varchar(1) NOT NULL DEFAULT '0',
   `originFlag` varchar(1) NOT NULL DEFAULT '1',
   `screenFlag` varchar(1) NOT NULL DEFAULT '1',
-  `shareFlag` varchar(1) NOT NULL DEFAULT '1',
+  `iosFlag` varchar(1) NOT NULL DEFAULT '0',
+  `pcFlag` varchar(1) NOT NULL DEFAULT '1',
+  `shareBlockFlag` varchar(1) NOT NULL DEFAULT '0',
   `adFlag` varchar(1) NOT NULL DEFAULT '0',
+  `mode` varchar(20) NOT NULL DEFAULT 'entertainment',
+  `activityId` varchar(128) DEFAULT NULL,
   `maxNum` int NOT NULL DEFAULT 1,
   `maxSec` int NOT NULL DEFAULT 3,
   `status` enum('0','1','2','3') NOT NULL DEFAULT '1',
@@ -54,6 +58,9 @@ CREATE TABLE IF NOT EXISTS `flash_records` (
   `recordMode` varchar(1) NOT NULL DEFAULT '0',
   `viewSec` int DEFAULT NULL,
   `screenFlag` varchar(1) NOT NULL DEFAULT '0',
+  `screenType` varchar(20) DEFAULT NULL,
+  `screenAt` datetime DEFAULT NULL,
+  `deviceInfo` varchar(512) DEFAULT NULL,
   `createdAt` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   PRIMARY KEY (`id`),
   KEY `IDX_flash_records_flashId` (`flashId`),
@@ -99,3 +106,30 @@ CREATE TABLE IF NOT EXISTS `user_bans` (
   KEY `IDX_user_bans_userId` (`userId`),
   KEY `IDX_user_bans_delFlag` (`delFlag`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+ALTER TABLE `flash`
+  ADD COLUMN IF NOT EXISTS `mode` varchar(20) NOT NULL DEFAULT 'entertainment' AFTER `adFlag`;
+
+ALTER TABLE `flash`
+  ADD COLUMN IF NOT EXISTS `activityId` varchar(128) DEFAULT NULL AFTER `mode`;
+
+ALTER TABLE `flash`
+  ADD COLUMN IF NOT EXISTS `iosFlag` varchar(1) NOT NULL DEFAULT '0' AFTER `screenFlag`;
+
+ALTER TABLE `flash`
+  ADD COLUMN IF NOT EXISTS `pcFlag` varchar(1) NOT NULL DEFAULT '1' AFTER `iosFlag`;
+
+ALTER TABLE `flash`
+  ADD COLUMN IF NOT EXISTS `shareBlockFlag` varchar(1) NOT NULL DEFAULT '0' AFTER `pcFlag`;
+
+ALTER TABLE `flash`
+  DROP COLUMN IF EXISTS `shareFlag`;
+
+ALTER TABLE `flash_records`
+  ADD COLUMN IF NOT EXISTS `screenType` varchar(20) DEFAULT NULL AFTER `screenFlag`;
+
+ALTER TABLE `flash_records`
+  ADD COLUMN IF NOT EXISTS `screenAt` datetime DEFAULT NULL AFTER `screenType`;
+
+ALTER TABLE `flash_records`
+  ADD COLUMN IF NOT EXISTS `deviceInfo` varchar(512) DEFAULT NULL AFTER `screenAt`;

@@ -36,9 +36,11 @@
 
 	.app-page {
 		min-height: 100vh;
-		padding: 0 14rpx calc(146rpx + env(safe-area-inset-bottom));
-		padding-bottom: calc(146rpx + constant(safe-area-inset-bottom));
+		padding: 0 14rpx 170rpx;
+		padding-bottom: calc(170rpx + constant(safe-area-inset-bottom));
+		padding-bottom: calc(170rpx + env(safe-area-inset-bottom));
 		background: #f5f6f8;
+		box-sizing: border-box;
 	}
 
 	.app-nav {
@@ -134,17 +136,22 @@
 		right: 0;
 		bottom: 0;
 		z-index: 20;
-		height: calc(104rpx + env(safe-area-inset-bottom));
-		height: calc(104rpx + constant(safe-area-inset-bottom));
-		padding-bottom: env(safe-area-inset-bottom);
+		min-height: 118rpx;
+		height: 118rpx;
+		height: calc(118rpx + constant(safe-area-inset-bottom));
+		height: calc(118rpx + env(safe-area-inset-bottom));
+		padding-bottom: 0;
 		padding-bottom: constant(safe-area-inset-bottom);
+		padding-bottom: env(safe-area-inset-bottom);
 		background: #fff;
 		display: flex;
 		border-top: 1px solid rgba(0, 0, 0, 0.03);
+		box-sizing: border-box;
 	}
 
 	.tab-item {
 		flex: 1;
+		min-width: 0;
 		display: flex;
 		flex-direction: column;
 		align-items: center;

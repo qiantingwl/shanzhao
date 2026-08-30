@@ -69,17 +69,27 @@ export class UploadController {
     const thumbFilename = `thumb_${file.filename}`;
     const thumbPath = join(thumbDir, thumbFilename);
     await sharp(absPath)
-      .resize(400, 400, { fit: 'cover' })
-      .blur(20)
-      .jpeg({ quality: 70 })
+      .resize({
+        width: 420,
+        height: 420,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .blur(36)
+      .jpeg({ quality: 62 })
       .toFile(thumbPath);
 
     const shareFilename = `share_${file.filename}`;
     const sharePath = join(thumbDir, shareFilename);
     await sharp(absPath)
-      .resize(500, 400, { fit: 'cover' })
-      .blur(20)
-      .jpeg({ quality: 75 })
+      .resize({
+        width: 640,
+        height: 640,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .blur(32)
+      .jpeg({ quality: 68 })
       .toFile(sharePath);
 
     let fileUrl = '';

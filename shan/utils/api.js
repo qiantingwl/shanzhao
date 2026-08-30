@@ -20,6 +20,14 @@ export function adUnlock(flashId) {
   return request({ url: `/api/mp/flash/${flashId}/ad-unlock`, method: 'POST' })
 }
 
+export function getPrivateUploadAdStatus() {
+  return request({ url: '/api/mp/flash/private-upload-ad/status' })
+}
+
+export function recordPrivateUploadAd() {
+  return request({ url: '/api/mp/flash/private-upload-ad/record', method: 'POST' })
+}
+
 export function recordShare(flashId) {
   return request({ url: `/api/mp/flash/${flashId}/share`, method: 'POST' })
 }
@@ -56,6 +64,10 @@ export function getFlashForViewer(id) {
 
 export function recordView(id, dto) {
   return request({ url: `/api/mp/flash/${id}/view`, method: 'POST', data: dto })
+}
+
+export function updateViewRecord(recordId, dto) {
+  return request({ url: `/api/mp/flash/record/${recordId}`, method: 'PATCH', data: dto })
 }
 
 export function getRemain(id) {

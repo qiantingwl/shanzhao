@@ -11,12 +11,7 @@ import { $OpenApiUtil } from '@alicloud/openapi-core';
 import { RuntimeOptions } from '@darabonba/typescript';
 import { SysConfigService } from '../../config/config.service';
 
-type AuditDriver =
-  | 'aliyun'
-  | 'vxlink'
-  | 'helloz'
-  | 'nsfwpy'
-  | 'fake';
+type AuditDriver = 'aliyun' | 'vxlink' | 'helloz' | 'nsfwpy' | 'disabled';
 
 interface AuditResult {
   pass: boolean;
@@ -43,7 +38,6 @@ const ACTIVE_AUDIT_DRIVERS: AuditDriver[] = [
   'vxlink',
   'helloz',
   'nsfwpy',
-  'fake',
 ];
 const DEFAULT_NSFW_THRESHOLD = 0.8;
 const DOWNLOAD_LIMIT = 12 * 1024 * 1024;
@@ -64,16 +58,16 @@ export class ImageAuditService {
 
   private async getDriver(): Promise<AuditDriver> {
     const enabled = await this.sysConfig.getBool('audit_enabled', false);
-    if (!enabled) return 'fake';
+    if (!enabled) return 'disabled';
 
     const driver = (
-      (await this.val('image_audit_driver', 'IMAGE_AUDIT_DRIVER')) || 'fake'
+      (await this.val('image_audit_driver', 'IMAGE_AUDIT_DRIVER')) || 'aliyun'
     ).toLowerCase() as AuditDriver;
 
     if (ACTIVE_AUDIT_DRIVERS.includes(driver)) {
       return driver;
     }
-    return 'fake';
+    throw new Error(`Unsupported image audit driver: ${driver}`);
   }
 
   async checkImageFile(
@@ -96,10 +90,10 @@ export class ImageAuditService {
         return this.checkByHellozFile(auditFile);
       case 'nsfwpy':
         return this.checkByNsfwpyFile(auditFile);
-      case 'fake':
-        return { pass: true, reason: 'fake audit' };
+      case 'disabled':
+        return { pass: true, reason: 'audit disabled' };
       default:
-        return { pass: true, reason: 'public url audit required' };
+        throw new Error('Unsupported image audit driver');
     }
   }
 

@@ -12,6 +12,7 @@ import axios from 'axios';
 import * as bcrypt from 'bcrypt';
 import { User } from '../entities/user.entity';
 import { AdminUser } from '../entities/admin-user.entity';
+import { UserBan } from '../entities/user-ban.entity';
 import { SysConfigService } from '../config/config.service';
 
 interface WxSession {
@@ -26,20 +27,18 @@ export class AuthService {
   constructor(
     @InjectRepository(User) private userRepo: Repository<User>,
     @InjectRepository(AdminUser) private adminRepo: Repository<AdminUser>,
+    @InjectRepository(UserBan) private userBanRepo: Repository<UserBan>,
     private jwtService: JwtService,
     private configService: ConfigService,
     private sysConfig: SysConfigService,
   ) {}
 
   async wxLogin(code: string) {
+    const cfg = await this.sysConfig.mget(['wx_appid', 'wx_secret']);
     const appid =
-      (await this.sysConfig.get('wx_appid')) ||
-      this.configService.get<string>('WX_APPID') ||
-      '';
+      cfg['wx_appid'] || this.configService.get<string>('WX_APPID') || '';
     const secret =
-      (await this.sysConfig.get('wx_secret')) ||
-      this.configService.get<string>('WX_SECRET') ||
-      '';
+      cfg['wx_secret'] || this.configService.get<string>('WX_SECRET') || '';
     if (!appid || !secret) {
       throw new UnauthorizedException(
         '微信登录未配置，请在后台系统配置中填写小程序 AppID 和 AppSecret',
@@ -58,12 +57,27 @@ export class AuthService {
       await this.userRepo.save(user);
     }
 
-    if (user.isBanned) {
+    if (user.isBanned && (await this.isBanActive(user.id))) {
       throw new UnauthorizedException('账号已被封禁');
+    }
+    if (user.isBanned) {
+      user.isBanned = false;
+      await this.userRepo.save(user);
     }
 
     const token = this.jwtService.sign({ sub: user.id, openid: user.openid });
     return { token, user };
+  }
+
+  private async isBanActive(userId: string) {
+    const now = new Date();
+    const active = await this.userBanRepo
+      .createQueryBuilder('ban')
+      .where('ban.userId = :userId', { userId })
+      .andWhere('ban.delFlag = :delFlag', { delFlag: '0' })
+      .andWhere('(ban.secureTime IS NULL OR ban.secureTime > :now)', { now })
+      .getOne();
+    return !!active;
   }
 
   async adminLogin(username: string, password: string) {
@@ -122,20 +136,23 @@ export class AuthService {
     const count = await this.adminRepo.count();
     if (count === 0) {
       if (this.configService.get('AUTO_INSTALLED') === '1') {
+        throw new Error('自动部署未成功写入管理员账号，已阻止后端继续启动');
+      }
+      const username = this.configService.get<string>('ADMIN_USER') ?? '';
+      const password = this.configService.get<string>('ADMIN_PASSWORD') ?? '';
+      if (!username || !password) {
         throw new Error(
-          '自动部署未成功写入管理员账号，已阻止创建默认 admin/admin123',
+          '数据库中没有管理员，请通过 ADMIN_USER 和 ADMIN_PASSWORD 环境变量配置初始管理员',
         );
       }
-      const hash = await bcrypt.hash('admin123', 10);
+      const hash = await bcrypt.hash(password, 10);
       const admin = this.adminRepo.create({
-        username: 'admin',
+        username,
         password: hash,
         nickname: '超级管理员',
       });
       await this.adminRepo.save(admin);
-      console.log(
-        '[Init] 已创建默认管理员 admin / admin123，请登录后立即修改密码！',
-      );
+      console.log(`[Init] 已创建管理员 ${username}，请登录后立即修改密码！`);
     }
   }
 }

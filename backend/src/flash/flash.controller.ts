@@ -52,11 +52,23 @@ class CreateFlashDto {
 
   @IsOptional()
   @IsString()
-  shareFlag?: string;
+  iosFlag?: string;
+
+  @IsOptional()
+  @IsString()
+  pcFlag?: string;
+
+  @IsOptional()
+  @IsString()
+  shareBlockFlag?: string;
 
   @IsOptional()
   @IsString()
   adFlag?: string;
+
+  @IsOptional()
+  @IsString()
+  mode?: string;
 
   @IsOptional()
   @IsNumber()
@@ -75,6 +87,18 @@ class RecordViewDto {
   @IsOptional()
   @IsString()
   screenFlag?: string;
+
+  @IsOptional()
+  @IsString()
+  screenType?: string;
+
+  @IsOptional()
+  @IsString()
+  screenAt?: string;
+
+  @IsOptional()
+  @IsString()
+  deviceInfo?: string;
 }
 
 @UseGuards(JwtAuthGuard)
@@ -94,6 +118,16 @@ export class FlashController {
     @Query('pageSize') pageSize = 20,
   ) {
     return this.flashService.getMyList(req.user.userId, +page, +pageSize);
+  }
+
+  @Get('private-upload-ad/status')
+  getPrivateUploadAdStatus(@Request() req: AuthRequest) {
+    return this.flashService.getPrivateUploadAdStatus(req.user.userId);
+  }
+
+  @Post('private-upload-ad/record')
+  recordPrivateUploadAd(@Request() req: AuthRequest) {
+    return this.flashService.recordPrivateUploadAd(req.user.userId);
   }
 
   @Get(':id')
@@ -133,6 +167,15 @@ export class FlashController {
     @Body() dto: RecordViewDto,
   ) {
     return this.flashService.recordView(id, req.user.userId, dto);
+  }
+
+  @Patch('record/:recordId')
+  updateViewRecord(
+    @Param('recordId') recordId: string,
+    @Request() req: AuthRequest,
+    @Body() dto: RecordViewDto,
+  ) {
+    return this.flashService.updateViewRecord(recordId, req.user.userId, dto);
   }
 
   @Get(':id/remain')

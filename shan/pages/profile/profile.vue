@@ -230,6 +230,7 @@ export default {
 	padding-top: 0;
 	min-height: 100vh;
 	background: #f5f6f8;
+	box-sizing: border-box;
 }
 
 .app-nav {
@@ -247,9 +248,9 @@ export default {
 }
 
 .profile-content {
-	min-height: calc(100vh - 214rpx);
-	padding: 20rpx 24rpx calc(130rpx + env(safe-area-inset-bottom));
+	padding: 20rpx 24rpx 150rpx;
 	padding-bottom: calc(130rpx + constant(safe-area-inset-bottom));
+	padding-bottom: calc(130rpx + env(safe-area-inset-bottom));
 	display: flex;
 	flex-direction: column;
 	box-sizing: border-box;

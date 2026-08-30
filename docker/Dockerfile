@@ -37,7 +37,7 @@ COPY --from=backend-builder /backend/public ./public
 COPY docker/container-init.sql ./sql/container-init.sql
 COPY docker/entrypoint.sh ./entrypoint.sh
 
-RUN chmod +x /app/entrypoint.sh && mkdir -p /app/data /app/uploads /app/runtime /run/mysqld
+RUN sed -i 's/\r$//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh && mkdir -p /app/data /app/uploads /app/runtime /run/mysqld
 EXPOSE 3000
 VOLUME ["/app/data"]
 CMD ["/app/entrypoint.sh"]

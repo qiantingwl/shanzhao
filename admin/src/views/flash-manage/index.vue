@@ -59,6 +59,19 @@ const statusLabelMap: Record<string, string> = {
   '3': '已拒绝'
 };
 
+function renderPreview(path?: string) {
+  return path
+    ? h('div', { class: 'flash-preview-box' }, [
+        h(NImage, {
+          src: resolveFileUrl(path),
+          width: 72,
+          height: 72,
+          objectFit: 'cover'
+        })
+      ])
+    : h('span', '-');
+}
+
 async function loadData() {
   loading.value = true;
   try {
@@ -114,20 +127,14 @@ const columns: DataTableColumns<FlashItem> = [
   {
     title: '缩略图',
     key: 'fileThumb',
-    width: 80,
-    render: row =>
-      row.fileThumb
-        ? h(NImage, { src: resolveFileUrl(row.fileThumb), width: 48, height: 48, objectFit: 'cover' })
-        : h('span', '-')
+    width: 100,
+    render: row => renderPreview(row.fileThumb)
   },
   {
     title: '原图',
     key: 'filePath',
-    width: 80,
-    render: row =>
-      row.filePath
-        ? h(NImage, { src: resolveFileUrl(row.filePath), width: 48, height: 48, objectFit: 'cover' })
-        : h('span', '-')
+    width: 100,
+    render: row => renderPreview(row.filePath)
   },
   { title: '发布者', key: 'authorId', render: row => h('span', row.author?.nickname || row.authorId) },
   {
@@ -135,6 +142,21 @@ const columns: DataTableColumns<FlashItem> = [
     key: 'status',
     render: row =>
       h(NTag, { type: statusTypeMap[row.status] ?? 'default' }, { default: () => statusLabelMap[row.status] ?? row.status })
+  },
+  {
+    title: '安全',
+    key: 'security',
+    width: 190,
+    render: row =>
+      h(NSpace, { size: 4 }, {
+        default: () => [
+          row.screenFlag === '1' ? h(NTag, { size: 'small', type: 'warning' }, { default: () => '防截屏' }) : null,
+          row.shareBlockFlag === '1' ? h(NTag, { size: 'small', type: 'error' }, { default: () => '禁转发' }) : null,
+          row.iosFlag === '1' || row.pcFlag === '1'
+            ? h(NTag, { size: 'small', type: 'info' }, { default: () => '禁 iOS/PC' })
+            : null
+        ].filter(Boolean)
+      })
   },
   { title: '最大次数', key: 'maxNum', width: 90 },
   { title: '时长(秒)', key: 'maxSec', width: 90 },
@@ -205,3 +227,14 @@ onMounted(loadData);
     </NModal>
   </div>
 </template>
+
+<style scoped>
+.flash-preview-box {
+  width: 72px;
+  height: 72px;
+  overflow: hidden;
+  background: #f5f6f8;
+  border: 1px solid #eef0f4;
+  border-radius: 6px;
+}
+</style>

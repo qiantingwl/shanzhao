@@ -11,7 +11,7 @@ DB_NAME="${DB_NAME:-shanzhao}"
 DB_USER="${DB_USER:-shanzhao}"
 DB_PASSWORD="${DB_PASSWORD:-$(openssl rand -base64 36 | tr -dc 'A-Za-z0-9' | cut -c 1-24)}"
 ADMIN_USER="${ADMIN_USER:-admin}"
-ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin123}"
+ADMIN_PASSWORD="${ADMIN_PASSWORD:-$(openssl rand -base64 36 | tr -dc 'A-Za-z0-9' | cut -c 1-16)}"
 APP_PORT="${PORT:-3000}"
 
 mkdir -p "$DATA_DIR" "$DB_DIR" "$RUNTIME_DIR" "$UPLOADS_DIR" "$SOCKET_DIR"
@@ -48,7 +48,7 @@ for i in $(seq 1 90); do
 done
 
 if [ ! -f "${RUNTIME_DIR}/install.lock" ]; then
-  echo "[初始化] 正在创建数据库和默认管理员..."
+  echo "[初始化] 正在创建数据库和初始管理员..."
   mariadb --socket="$DB_SOCKET" <<SQL
 CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 CREATE USER IF NOT EXISTS '${DB_USER}'@'127.0.0.1' IDENTIFIED BY '${DB_PASSWORD}';
@@ -93,6 +93,9 @@ Database: built-in MariaDB
 Data dir inside container: ${DATA_DIR}
 EOF
 fi
+
+echo "[database] applying compatible schema migrations..."
+mariadb --socket="$DB_SOCKET" "$DB_NAME" < /app/sql/container-init.sql
 
 export INSTALL_STATE_DIR="$RUNTIME_DIR"
 export PORT="$APP_PORT"
