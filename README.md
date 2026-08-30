@@ -35,7 +35,16 @@ docker compose up -d
 docker compose logs shanzhao
 ```
 
-首次启动会自动创建数据库、生成 JWT 密钥和随机后台密码。日志中的 `Admin username` 与 `Admin password` 只在初始化时生成；请登录 `http://服务器IP:3000/` 后立即修改密码。
+首次启动会自动创建数据库、生成 JWT 密钥和随机后台密码。
+
+### 后台登录
+
+- 全新安装的用户名默认为 `admin`，密码不是固定值。执行 `docker logs shanzhao` 查看日志中的 `Admin username` 与 `Admin password`。
+- 如果初始化日志已滚动，可执行 `docker exec shanzhao cat /app/data/runtime/auto-install-info.txt` 查看首次生成的账号和密码。
+- 从旧版本升级时会保留原数据库和管理员密码。未修改过账号的旧版实例通常为 `admin` / `admin123`；请登录后立即修改，公开部署不要继续使用该密码。
+- 登录提示 `Network Error` 表示管理后台没有连上 API，并非账号或密码错误。请先确认后台访问的是正确服务器，并检查容器、反向代理和 `3000` 端口。
+
+初始化账号只在全新数据目录中生成一次；升级或重启容器不会重置密码。后台地址为 `http://服务器IP:3000/`，配置反向代理后使用对应的 HTTPS 域名。
 
 数据保存在 Docker 卷 `shanzhao-data`。生产环境也可以显式挂载宿主机目录：
 
@@ -59,7 +68,7 @@ docker run -d --name shanzhao --restart unless-stopped \
   ghcr.io/qiantingwl/shanzhao:latest
 ```
 
-`ADMIN_PASSWORD` 仅在全新数据目录初始化时生效。
+`ADMIN_PASSWORD` 仅在全新数据目录初始化时生效，不能用来覆盖已有管理员密码。
 
 ## 配置 HTTPS
 
@@ -153,7 +162,8 @@ docker rm -f shanzhao
 ## 常见问题
 
 - 后台打不开：确认容器状态和 `3000` 端口放行，执行 `docker logs shanzhao` 查看启动日志。
-- 忘记初始密码：初始化日志保存在数据目录的 `runtime/auto-install-info.txt`；也可在容器内执行 `cat /app/data/runtime/auto-install-info.txt`。
+- 忘记初始密码：执行 `docker exec shanzhao cat /app/data/runtime/auto-install-info.txt`。旧版实例若从未修改过密码，可尝试 `admin` / `admin123`；升级不会重置已有密码。
+- 登录显示 `Network Error`：这是 API 地址或网络连接问题，不是密码错误。确认页面来自目标服务器，检查反向代理、容器状态和浏览器开发者工具中的失败请求。
 - 上传返回 413：提高反向代理的 `client_max_body_size`。
 - 小程序请求失败：检查 HTTPS 证书、`DEFAULT_BASE_URL` 和微信公众平台合法域名。
 - 微信登录提示未配置：在后台填写 AppID/AppSecret；保存后立即生效。
